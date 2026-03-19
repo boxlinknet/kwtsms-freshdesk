@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="./iparams.css">
+  <script src="https://static.freshdev.io/fdk/2.0/assets/fresh_client.js"></script>
+</head>
+<body>
+  <div class="iparams-container">
+    <h3 class="section-title">kwtSMS Gateway Configuration</h3>
+
+    <div class="form-group">
+      <label for="kwtsms_username">API Username</label>
+      <input type="text" id="kwtsms_username" name="kwtsms_username" required
+             placeholder="Your kwtSMS API username (not mobile number)">
+      <small class="help-text">Enter the API username from your kwtSMS account</small>
+    </div>
+
+    <div class="form-group">
+      <label for="kwtsms_password">API Password</label>
+      <input type="password" id="kwtsms_password" name="kwtsms_password" required
+             placeholder="Your kwtSMS API password">
+    </div>
+
+    <div class="form-group">
+      <button type="button" id="btn-test" class="btn btn-primary" onclick="testConnection()">
+        Test Connection
+      </button>
+      <span id="connection-status" class="status-badge hidden"></span>
+    </div>
+
+    <div id="sender-group" class="form-group hidden">
+      <label for="kwtsms_senderid">Sender ID</label>
+      <select id="kwtsms_senderid" name="kwtsms_senderid">
+        <option value="KWT-SMS">KWT-SMS (test only)</option>
+      </select>
+      <small class="help-text">Select a sender ID from your kwtSMS account</small>
+    </div>
+
+    <div class="form-group">
+      <label for="kwtsms_company_name">Company Name</label>
+      <input type="text" id="kwtsms_company_name" name="kwtsms_company_name" required
+             placeholder="Your company/brand name for SMS templates">
+      <small class="help-text">This appears in SMS messages as {{company_name}}</small>
+    </div>
+
+    <div id="gateway-info" class="info-box hidden">
+      <div class="info-row"><span class="info-label">Balance:</span> <span id="info-balance">-</span></div>
+      <div class="info-row"><span class="info-label">Sender IDs:</span> <span id="info-senders">-</span></div>
+    </div>
+  </div>
+
+  <script src="./iparams.js"></script>
+</body>
+</html>
