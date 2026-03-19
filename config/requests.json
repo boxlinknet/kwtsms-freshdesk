@@ -1,0 +1,67 @@
+{
+  "checkBalance": {
+    "schema": {
+      "method": "POST",
+      "protocol": "https",
+      "host": "www.kwtsms.com",
+      "path": "/API/balance/",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
+    }
+  },
+  "sendSms": {
+    "schema": {
+      "method": "POST",
+      "protocol": "https",
+      "host": "www.kwtsms.com",
+      "path": "/API/send/",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\",\"sender\":\"<%= context.sender %>\",\"mobile\":\"<%= context.mobile %>\",\"message\":\"<%= context.message %>\",\"test\":\"<%= context.test %>\"}"
+    }
+  },
+  "getSenderIds": {
+    "schema": {
+      "method": "POST",
+      "protocol": "https",
+      "host": "www.kwtsms.com",
+      "path": "/API/senderid/",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
+    }
+  },
+  "getCoverage": {
+    "schema": {
+      "method": "POST",
+      "protocol": "https",
+      "host": "www.kwtsms.com",
+      "path": "/API/coverage/",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
+    }
+  },
+  "validatePhone": {
+    "schema": {
+      "method": "POST",
+      "protocol": "https",
+      "host": "www.kwtsms.com",
+      "path": "/API/validate/",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\",\"mobile\":\"<%= context.mobile %>\"}"
+    }
+  }
+}

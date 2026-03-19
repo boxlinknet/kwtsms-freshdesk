@@ -1,0 +1,14 @@
+{
+  "sms_log": {
+    "attributes": {
+      "timestamp": { "type": "DATE_TIME", "required": true, "filterable": true },
+      "event_type": { "type": "STRING", "required": true, "filterable": true },
+      "recipient_phone": { "type": "STRING", "required": true, "filterable": true },
+      "message_preview": { "type": "STRING", "required": true },
+      "status": { "type": "STRING", "required": true, "filterable": true },
+      "api_response_code": { "type": "STRING" },
+      "ticket_id": { "type": "NUMBER", "filterable": true },
+      "msg_id": { "type": "STRING" }
+    }
+  }
+}

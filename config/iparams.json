@@ -1,0 +1,30 @@
+{
+  "kwtsms_username": {
+    "display_name": "kwtSMS Username",
+    "description": "Your kwtSMS API username (not your mobile number)",
+    "type": "text",
+    "required": true,
+    "secure": true
+  },
+  "kwtsms_password": {
+    "display_name": "kwtSMS Password",
+    "description": "Your kwtSMS API password",
+    "type": "text",
+    "required": true,
+    "secure": true
+  },
+  "kwtsms_senderid": {
+    "display_name": "Sender ID",
+    "description": "Select after testing connection",
+    "type": "text",
+    "required": true,
+    "default_value": "KWT-SMS"
+  },
+  "kwtsms_company_name": {
+    "display_name": "Company Name",
+    "description": "Your company/brand name for SMS templates",
+    "type": "text",
+    "required": true,
+    "default_value": ""
+  }
+}
