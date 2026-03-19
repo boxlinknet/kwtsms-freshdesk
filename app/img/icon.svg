@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <rect x="2" y="4" width="20" height="14" rx="3" fill="#2563eb"/>
+  <path d="M6 18 L12 22 L12 18" fill="#2563eb"/>
+  <text x="12" y="13" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="7" font-weight="bold">SMS</text>
+</svg>
