@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles/style.css">
+  <script src="https://static.freshdev.io/fdk/2.0/assets/fresh_client.js"></script>
+  <style>
+    /* Sidebar-specific overrides for narrow width */
+    body { margin: 0; padding: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: #1f2937; background: #fff; }
+    .sidebar-header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb; margin-bottom: 10px; }
+    .sidebar-icon { width: 28px; height: 28px; background: #2563eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; }
+    .sidebar-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+    .sidebar-subtitle { font-size: 11px; color: #6b7280; }
+    .sidebar-meta { margin-left: auto; text-align: right; }
+    .dot-green { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+    .dot-red { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; }
+    .sidebar-balance { font-size: 11px; color: #6b7280; }
+    .test-banner { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px; padding: 6px 10px; font-size: 11px; color: #92400e; margin-bottom: 10px; text-align: center; }
+    .form-label { font-size: 10px; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .recipient-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .recipient-name { font-size: 12px; color: #1f2937; }
+    .recipient-phone { font-size: 11px; color: #2563eb; font-family: monospace; }
+    .validation-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+    .validation-badge.valid { background: #d1fae5; color: #065f46; }
+    .validation-badge.invalid { background: #fee2e2; color: #991b1b; }
+    .no-phone-msg { font-size: 11px; color: #dc2626; margin-bottom: 8px; }
+    .template-select { width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px; margin-bottom: 10px; color: #6b7280; background: #fff; }
+    .sms-textarea { width: 100%; min-height: 70px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px; resize: vertical; box-sizing: border-box; line-height: 1.5; color: #1f2937; }
+    .sms-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+    .char-info { display: flex; justify-content: space-between; font-size: 10px; color: #6b7280; margin: 4px 0 8px; }
+    .lang-toggle { display: flex; gap: 4px; margin-bottom: 10px; }
+    .lang-btn { padding: 3px 10px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; cursor: pointer; background: #fff; color: #6b7280; }
+    .lang-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .btn-send { width: 100%; padding: 10px; background: #059669; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 12px; }
+    .btn-send:hover { background: #047857; }
+    .btn-send:disabled { background: #9ca3af; cursor: not-allowed; }
+    .history-section { border-top: 1px solid #e5e7eb; padding-top: 10px; }
+    .history-title { font-size: 10px; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .history-item { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+    .history-header { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .history-status { font-size: 10px; }
+    .history-status.sent { color: #059669; }
+    .history-status.failed { color: #dc2626; }
+    .history-time { font-size: 10px; color: #9ca3af; }
+    .history-preview { font-size: 11px; color: #4b5563; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .history-empty { font-size: 11px; color: #9ca3af; text-align: center; padding: 12px 0; }
+    .sidebar-toast { position: fixed; bottom: 10px; left: 10px; right: 10px; padding: 8px 12px; border-radius: 4px; font-size: 12px; text-align: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .sidebar-toast.show { opacity: 1; }
+    .sidebar-toast.success { background: #d1fae5; color: #065f46; }
+    .sidebar-toast.error { background: #fee2e2; color: #991b1b; }
+    .sidebar-disabled { text-align: center; padding: 40px 16px; color: #6b7280; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-disabled" class="sidebar-disabled hidden">
+    <p>SMS gateway is disabled.</p>
+    <p style="font-size:11px">Enable it in the kwtSMS settings page.</p>
+  </div>
+
+  <div id="sidebar-content">
+    <!-- Header -->
+    <div class="sidebar-header">
+      <div class="sidebar-icon">KW</div>
+      <div>
+        <div class="sidebar-title">kwtSMS</div>
+        <div class="sidebar-subtitle">Send SMS to requester</div>
+      </div>
+      <div class="sidebar-meta">
+        <span id="status-dot" class="dot-green"></span>
+        <div id="sidebar-balance" class="sidebar-balance">--</div>
+      </div>
+    </div>
+
+    <!-- Test mode banner -->
+    <div id="test-mode-banner" class="test-banner hidden">
+      Test mode is ON. SMS will not be delivered.
+    </div>
+
+    <!-- Recipient -->
+    <div class="form-label">Recipient</div>
+    <div class="recipient-box">
+      <div>
+        <div id="recipient-name" class="recipient-name">Loading...</div>
+        <div id="recipient-phone" class="recipient-phone">--</div>
+      </div>
+      <span id="phone-valid" class="validation-badge"></span>
+    </div>
+    <div id="no-phone-msg" class="no-phone-msg hidden">No phone number on file. Edit the contact to add one.</div>
+
+    <!-- Template -->
+    <div class="form-label">Template (optional)</div>
+    <select id="template-select" class="template-select" onchange="selectTemplate()">
+      <option value="">Select a template...</option>
+    </select>
+
+    <!-- Message -->
+    <div class="form-label">Message</div>
+    <textarea id="sms-message" class="sms-textarea" placeholder="Type your message..."></textarea>
+    <div class="char-info">
+      <span><span id="char-count">0</span>/<span id="char-max">160</span> chars | <span id="sms-parts">0</span> SMS (<span id="encoding-type">GSM-7</span>)</span>
+    </div>
+
+    <!-- Language toggle -->
+    <div class="lang-toggle">
+      <button id="btn-lang-en" class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button id="btn-lang-ar" class="lang-btn" onclick="setLang('ar')">AR</button>
+    </div>
+
+    <!-- Send -->
+    <button id="btn-send" class="btn-send" onclick="sendSms()">Send SMS</button>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-title">Recent SMS for this contact</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="sidebar-toast" class="sidebar-toast"></div>
+
+  <script src="scripts/sidebar.js"></script>
+</body>
+</html>
