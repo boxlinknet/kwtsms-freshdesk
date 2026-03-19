@@ -38,6 +38,9 @@
         "getSenderIds": {},
         "getCoverage": {},
         "validatePhone": {}
+      },
+      "functions": {
+        "manualSendSms": {}
       }
     }
   },
