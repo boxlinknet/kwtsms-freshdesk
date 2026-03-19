@@ -437,14 +437,14 @@
       setText('stat-today', String(stats.today_sent || 0));
       setText('stat-month', String(stats.month_sent || 0));
       setText('stat-failed', String(stats.month_failed || 0));
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
 
     // Balance comes from gateway data
     dbGet(DS_KEYS.GATEWAY).then(function (gw) {
       if (gw && typeof gw.balance !== 'undefined') {
         setText('stat-balance', String(gw.balance));
       }
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   /**
@@ -469,8 +469,8 @@
         setText('gw-testmode-text', testMode ? 'Test Mode: ON' : 'Test Mode: OFF');
 
         setText('gw-sender-id', currentSettings.active_sender_id || '--');
-      }).catch(function () {});
-    }).catch(function () {});
+      }).catch(function () { /* ignored */ });
+    }).catch(function () { /* ignored */ });
   }
 
   /**
@@ -480,7 +480,7 @@
     entityGetAll(ENTITY_SMS_LOG, { page_size: 5 }).then(function (result) {
       const records = (result && result.records) || [];
       renderActivityTable('recent-activity-body', records, 'No recent activity');
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   /**
@@ -625,7 +625,7 @@
       setCheckbox('setting-debug', currentSettings.debug);
       setSelectValue('setting-language', currentSettings.language);
       setSelectValue('setting-sender-id', currentSettings.active_sender_id);
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
 
     // Gateway info
     dbGet(DS_KEYS.GATEWAY).then(function (gw) {
@@ -639,7 +639,7 @@
         // Populate sender ID dropdown
         populateSenderDropdown(gw.senderids || []);
       }
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   /**
@@ -860,7 +860,7 @@
     dbGet(DS_KEYS.TEMPLATES).then(function (templates) {
       currentTemplates = templates || {};
       renderActiveTemplate();
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   /**
@@ -1076,7 +1076,7 @@
       if (prevBtn) prevBtn.disabled = logPage <= 1;
       if (nextBtn) nextBtn.disabled = !result || !result.next;
       if (pageInfo) pageInfo.textContent = 'Page ' + logPage;
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   /**
@@ -1131,7 +1131,7 @@
       setCheckbox('alert-new-ticket', currentAdminAlerts.events.new_ticket);
       setCheckbox('alert-high-priority', currentAdminAlerts.events.high_priority);
       setCheckbox('alert-escalation', currentAdminAlerts.events.escalation);
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   /**

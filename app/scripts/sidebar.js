@@ -17,7 +17,7 @@
     app.initialized().then(function(_client) {
       client = _client;
       loadInitialData();
-    }).catch(function() {});
+    }).catch(function() { /* ignored */ });
   });
 
   function loadInitialData() {
@@ -51,7 +51,7 @@
       }
 
       renderSidebar();
-    }).catch(function () {});
+    }).catch(function () { /* ignored */ });
   }
 
   function renderSidebar() {
