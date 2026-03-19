@@ -4,14 +4,14 @@
  */
 
 (function() {
-  var client;
-  var settings = null;
-  var templates = null;
-  var contactPhone = '';
-  var contactName = '';
-  var ticketId = 0;
-  var ticketSubject = '';
-  var currentLang = 'en';
+  let client;
+  let settings = null;
+  let templates = null;
+  let contactPhone = '';
+  let contactName = '';
+  let ticketId = 0;
+  let ticketSubject = '';
+  let currentLang = 'en';
 
   document.addEventListener('DOMContentLoaded', function() {
     app.initialized().then(function(_client) {
@@ -69,11 +69,11 @@
 
     // Show balance
     client.db.get('kwtsms_gateway').then(function(data) {
-      var gateway = JSON.parse(data.kwtsms_gateway);
-      var balanceEl = document.getElementById('sidebar-balance');
+      let gateway = JSON.parse(data.kwtsms_gateway);
+      let balanceEl = document.getElementById('sidebar-balance');
       balanceEl.textContent = (gateway.balance || 0) + ' cr';
 
-      var statusDot = document.getElementById('status-dot');
+      let statusDot = document.getElementById('status-dot');
       statusDot.className = gateway.balance > 0 ? 'dot-green' : 'dot-red';
 
       // Disable send if zero balance
@@ -81,16 +81,16 @@
         document.getElementById('btn-send').disabled = true;
         document.getElementById('btn-send').textContent = 'Insufficient balance';
       }
-    }).catch(function() {});
+    }).catch(function() { /* gateway data may not exist yet */ });
 
     // Fill recipient
-    var nameEl = document.getElementById('recipient-name');
-    var phoneEl = document.getElementById('recipient-phone');
+    let nameEl = document.getElementById('recipient-name');
+    let phoneEl = document.getElementById('recipient-phone');
     nameEl.textContent = contactName || 'Unknown';
     phoneEl.textContent = contactPhone || 'No phone number';
 
     // Validate phone
-    var validEl = document.getElementById('phone-valid');
+    let validEl = document.getElementById('phone-valid');
     if (contactPhone && /^\+?\d{7,15}$/.test(contactPhone.replace(/[\s\-()]/g, ''))) {
       validEl.textContent = 'Valid';
       validEl.className = 'validation-badge valid';
@@ -112,7 +112,7 @@
     loadHistory();
 
     // Set up character counter
-    var textarea = document.getElementById('sms-message');
+    let textarea = document.getElementById('sms-message');
     textarea.addEventListener('input', updateCharCount);
 
     // Set initial language
@@ -122,16 +122,16 @@
 
   function populateTemplates() {
     if (!templates) return;
-    var select = document.getElementById('template-select');
+    let select = document.getElementById('template-select');
     // Add quick templates (subset useful for agents)
-    var quickTemplates = [
+    let quickTemplates = [
       { key: 'ticket_created', label: 'Ticket created notification' },
       { key: 'status_changed', label: 'Status update' },
       { key: 'agent_reply', label: 'Agent reply notification' }
     ];
     quickTemplates.forEach(function(qt) {
       if (templates[qt.key]) {
-        var option = document.createElement('option');
+        let option = document.createElement('option');
         option.value = qt.key;
         option.textContent = qt.label;
         select.appendChild(option);
@@ -141,14 +141,14 @@
 
   // Template selection handler (called from onchange)
   window.selectTemplate = function() {
-    var select = document.getElementById('template-select');
-    var key = select.value;
+    let select = document.getElementById('template-select');
+    let key = select.value;
     if (!key || !templates || !templates[key]) return;
 
-    var template = templates[key][currentLang] || templates[key]['en'] || '';
+    let template = templates[key][currentLang] || templates[key]['en'] || '';
 
     // Replace placeholders with actual ticket data
-    var resolved = template
+    let resolved = template
       .replace(/\{\{ticket_id\}\}/g, ticketId || '')
       .replace(/\{\{ticket_subject\}\}/g, ticketSubject || '')
       .replace(/\{\{requester_name\}\}/g, contactName || '')
@@ -167,10 +167,10 @@
   window.setLang = function(lang) {
     currentLang = lang;
     updateLangButtons();
-    var textarea = document.getElementById('sms-message');
+    let textarea = document.getElementById('sms-message');
     textarea.dir = lang === 'ar' ? 'rtl' : 'ltr';
     // Re-apply template if one was selected
-    var select = document.getElementById('template-select');
+    let select = document.getElementById('template-select');
     if (select.value) {
       window.selectTemplate();
     }
@@ -182,11 +182,11 @@
   }
 
   function updateCharCount() {
-    var text = document.getElementById('sms-message').value;
-    var isUnicode = !/^[@\u00a3\$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e \u00c6\u00e6\u00df\u00c9!"#\u00a4%&'()*+,\-.\/0-9:;<=>?\u00a1A-Z\u00c4\u00d6\u00d1\u00dca-z\u00e4\u00f6\u00f1\u00fc\u00e0\u000C^{}\[~\]|\u20ac]*$/.test(text);
+    let text = document.getElementById('sms-message').value;
+    let isUnicode = !/^[@\u00a3\$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e \u00c6\u00e6\u00df\u00c9!"#\u00a4%&'()*+,\-.\/0-9:;<=>?\u00a1A-Z\u00c4\u00d6\u00d1\u00dca-z\u00e4\u00f6\u00f1\u00fc\u00e0\u000C^{}\[~\]|\u20ac]*$/.test(text);
 
-    var chars = text.length;
-    var parts;
+    let chars = text.length;
+    let parts;
     if (isUnicode) {
       parts = chars <= 70 ? 1 : Math.ceil(chars / 67);
     } else {
@@ -201,7 +201,7 @@
 
   // Send SMS (called from onclick)
   window.sendSms = function() {
-    var message = document.getElementById('sms-message').value.trim();
+    let message = document.getElementById('sms-message').value.trim();
     if (!message) {
       showToast('Please enter a message', 'error');
       return;
@@ -211,7 +211,7 @@
       return;
     }
 
-    var btn = document.getElementById('btn-send');
+    let btn = document.getElementById('btn-send');
     btn.disabled = true;
     btn.textContent = 'Sending...';
 
@@ -222,7 +222,7 @@
         ticket_id: ticketId
       }
     }).then(function(data) {
-      var result = typeof data.response === 'string' ? JSON.parse(data.response) : data.response;
+      let result = typeof data.response === 'string' ? JSON.parse(data.response) : data.response;
       if (result.success) {
         showToast('SMS sent successfully', 'success');
         document.getElementById('sms-message').value = '';
@@ -243,21 +243,21 @@
     if (!contactPhone) return;
 
     // Normalize phone for Entity Store query
-    var normalizedPhone = contactPhone.replace(/\D/g, '').replace(/^0+/, '');
+    let normalizedPhone = contactPhone.replace(/\D/g, '').replace(/^0+/, '');
 
     client.db.entity.getAll('sms_log', {
       filter: { recipient_phone: normalizedPhone },
       page_size: 5
     }).then(function(data) {
-      var historyList = document.getElementById('history-list');
+      let historyList = document.getElementById('history-list');
       // Clear existing
       while (historyList.firstChild) {
         historyList.removeChild(historyList.firstChild);
       }
 
-      var records = data.records || data.data || [];
+      let records = data.records || data.data || [];
       if (records.length === 0) {
-        var emptyEl = document.createElement('div');
+        let emptyEl = document.createElement('div');
         emptyEl.className = 'history-empty';
         emptyEl.textContent = 'No SMS history';
         historyList.appendChild(emptyEl);
@@ -265,25 +265,25 @@
       }
 
       records.forEach(function(record) {
-        var attrs = record.attributes || record;
-        var item = document.createElement('div');
+        let attrs = record.attributes || record;
+        let item = document.createElement('div');
         item.className = 'history-item';
 
-        var header = document.createElement('div');
+        let header = document.createElement('div');
         header.className = 'history-header';
 
-        var status = document.createElement('span');
+        let status = document.createElement('span');
         status.className = attrs.status === 'sent' ? 'history-status sent' : 'history-status failed';
         status.textContent = attrs.status === 'sent' ? 'Sent' : 'Failed';
 
-        var time = document.createElement('span');
+        let time = document.createElement('span');
         time.className = 'history-time';
         time.textContent = formatRelativeTime(attrs.timestamp);
 
         header.appendChild(status);
         header.appendChild(time);
 
-        var preview = document.createElement('div');
+        let preview = document.createElement('div');
         preview.className = 'history-preview';
         preview.textContent = attrs.message_preview || '';
 
@@ -298,12 +298,12 @@
 
   function formatRelativeTime(isoString) {
     if (!isoString) return '';
-    var date = new Date(isoString);
-    var now = new Date();
-    var diffMs = now - date;
-    var diffMins = Math.floor(diffMs / 60000);
-    var diffHours = Math.floor(diffMs / 3600000);
-    var diffDays = Math.floor(diffMs / 86400000);
+    let date = new Date(isoString);
+    let now = new Date();
+    let diffMs = now - date;
+    let diffMins = Math.floor(diffMs / 60000);
+    let diffHours = Math.floor(diffMs / 3600000);
+    let diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return diffMins + ' min ago';
@@ -313,7 +313,7 @@
   }
 
   function showToast(message, type) {
-    var toast = document.getElementById('sidebar-toast');
+    let toast = document.getElementById('sidebar-toast');
     toast.textContent = message;
     toast.className = 'sidebar-toast ' + type + ' show';
     setTimeout(function() {

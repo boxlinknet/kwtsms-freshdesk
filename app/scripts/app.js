@@ -18,7 +18,7 @@
   // ──────────────────────────────────────────────
 
   /** @type {Object} Data Storage key names */
-  var DS_KEYS = {
+  let DS_KEYS = {
     SETTINGS: 'kwtsms_settings',
     GATEWAY: 'kwtsms_gateway',
     TEMPLATES: 'kwtsms_templates',
@@ -27,10 +27,10 @@
   };
 
   /** @type {string} Entity Store entity name */
-  var ENTITY_SMS_LOG = 'sms_log';
+  let ENTITY_SMS_LOG = 'sms_log';
 
   /** @type {Object} Default settings */
-  var DEFAULT_SETTINGS = {
+  let DEFAULT_SETTINGS = {
     enabled: false,
     test_mode: true,
     debug: false,
@@ -40,7 +40,7 @@
   };
 
   /** @type {Object} Default admin alerts */
-  var DEFAULT_ADMIN_ALERTS = {
+  let DEFAULT_ADMIN_ALERTS = {
     phones: [],
     events: {
       new_ticket: true,
@@ -49,53 +49,43 @@
     }
   };
 
-  /** @type {string[]} Template event keys in display order */
-  var TEMPLATE_EVENTS = [
-    'ticket_created',
-    'status_changed',
-    'agent_reply',
-    'admin_new_ticket',
-    'admin_high_priority',
-    'admin_escalation'
-  ];
-
   /** @type {string} GSM-7 character set for SMS part calculation */
-  var GSM7_CHARS = '@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e\u00c6\u00e6\u00df\u00c9 !"#\u00a4%&\'()*+,-./0123456789:;<=>?'
+  let GSM7_CHARS = '@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e\u00c6\u00e6\u00df\u00c9 !"#\u00a4%&\'()*+,-./0123456789:;<=>?'
     + '\u00a1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00c4\u00d6\u00d1\u00dc\u00a7\u00bfabcdefghijklmnopqrstuvwxyz\u00e4\u00f6\u00f1\u00fc\u00e0';
 
   /** @type {string} GSM-7 extended chars (count as 2 characters) */
-  var GSM7_EXTENDED = '|^{}[]~\\€';
+  let GSM7_EXTENDED = '|^{}[]~\\€';
 
   // ──────────────────────────────────────────────
   // Application State
   // ──────────────────────────────────────────────
 
   /** @type {Object|null} Freshworks client instance */
-  var client = null;
+  let client = null;
 
   /** @type {Object} Current loaded settings */
-  var currentSettings = null;
+  let currentSettings = null;
 
   /** @type {Object} Current loaded templates */
-  var currentTemplates = {};
+  let currentTemplates = {};
 
   /** @type {Object} Current loaded admin alerts */
-  var currentAdminAlerts = null;
+  let currentAdminAlerts = null;
 
   /** @type {Object} Current loaded gateway info */
-  var currentGateway = null;
+  let currentGateway = null;
 
   /** @type {string} Currently selected template event */
-  var activeTemplateEvent = 'ticket_created';
+  let activeTemplateEvent = 'ticket_created';
 
   /** @type {number} Current log page */
-  var logPage = 1;
+  let logPage = 1;
 
   /** @type {number} Logs per page */
-  var LOG_PAGE_SIZE = 20;
+  let LOG_PAGE_SIZE = 20;
 
   /** @type {boolean} Whether we are in RTL mode */
-  var isRTL = false;
+  let isRTL = false;
 
   // ──────────────────────────────────────────────
   // Initialization
@@ -142,8 +132,8 @@
    * Set up click handlers for tab switching.
    */
   function setupTabNavigation() {
-    var tabButtons = document.querySelectorAll('.tab-btn');
-    for (var i = 0; i < tabButtons.length; i++) {
+    let tabButtons = document.querySelectorAll('.tab-btn');
+    for (let i = 0; i < tabButtons.length; i++) {
       tabButtons[i].addEventListener('click', handleTabClick);
     }
   }
@@ -153,7 +143,7 @@
    * @param {Event} e - Click event
    */
   function handleTabClick(e) {
-    var targetTab = e.currentTarget.getAttribute('data-tab');
+    let targetTab = e.currentTarget.getAttribute('data-tab');
     activateTab(targetTab);
   }
 
@@ -163,17 +153,17 @@
    */
   function activateTab(tabId) {
     // Update buttons
-    var tabButtons = document.querySelectorAll('.tab-btn');
-    for (var i = 0; i < tabButtons.length; i++) {
-      var btn = tabButtons[i];
-      var isActive = btn.getAttribute('data-tab') === tabId;
+    let tabButtons = document.querySelectorAll('.tab-btn');
+    for (let i = 0; i < tabButtons.length; i++) {
+      let btn = tabButtons[i];
+      let isActive = btn.getAttribute('data-tab') === tabId;
       btn.classList.toggle('active', isActive);
       btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     }
 
     // Update panels
-    var panels = document.querySelectorAll('.tab-panel');
-    for (var j = 0; j < panels.length; j++) {
+    let panels = document.querySelectorAll('.tab-panel');
+    for (let j = 0; j < panels.length; j++) {
       panels[j].classList.toggle('active', panels[j].id === 'tab-' + tabId);
     }
 
@@ -196,12 +186,12 @@
    * Set up the language direction toggle button.
    */
   function setupLanguageToggle() {
-    var btn = document.getElementById('btn-lang-toggle');
+    let btn = document.getElementById('btn-lang-toggle');
     if (btn) {
       btn.addEventListener('click', function () {
         isRTL = !isRTL;
         document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
-        var label = document.getElementById('lang-toggle-label');
+        let label = document.getElementById('lang-toggle-label');
         if (label) {
           label.textContent = isRTL ? 'EN' : 'AR';
         }
@@ -221,7 +211,7 @@
   function dbGet(key) {
     if (!client) return Promise.resolve(null);
     return client.db.get(key).then(function (result) {
-      var raw = result[key];
+      let raw = result[key];
       if (typeof raw === 'string') {
         try { return JSON.parse(raw); } catch (e) { return raw; }
       }
@@ -250,7 +240,7 @@
    */
   function entityGetAll(entity, opts) {
     if (!client) return Promise.resolve({ records: [], next: null });
-    var params = opts || {};
+    let params = opts || {};
     return client.db.entity.getAll(entity, params).catch(function () {
       return { records: [], next: null };
     });
@@ -278,10 +268,10 @@
    * @param {string} [type] - Type: "success", "error", "warning", or default
    */
   function showToast(message, type) {
-    var container = document.getElementById('toast-container');
+    let container = document.getElementById('toast-container');
     if (!container) return;
 
-    var toast = document.createElement('div');
+    let toast = document.createElement('div');
     toast.className = 'toast';
     if (type) {
       toast.className += ' toast-' + type;
@@ -309,8 +299,8 @@
    * @returns {boolean} True if all characters are GSM-7
    */
   function isGSM7(text) {
-    for (var i = 0; i < text.length; i++) {
-      var ch = text[i];
+    for (let i = 0; i < text.length; i++) {
+      let ch = text[i];
       if (GSM7_CHARS.indexOf(ch) === -1 && GSM7_EXTENDED.indexOf(ch) === -1) {
         return false;
       }
@@ -324,8 +314,8 @@
    * @returns {number} GSM-7 character count
    */
   function gsm7Length(text) {
-    var len = 0;
-    for (var i = 0; i < text.length; i++) {
+    let len = 0;
+    for (let i = 0; i < text.length; i++) {
       len += GSM7_EXTENDED.indexOf(text[i]) !== -1 ? 2 : 1;
     }
     return len;
@@ -342,8 +332,8 @@
     }
 
     if (isGSM7(text)) {
-      var charCount = gsm7Length(text);
-      var parts;
+      let charCount = gsm7Length(text);
+      let parts;
       if (charCount <= 160) {
         parts = 1;
       } else {
@@ -353,8 +343,8 @@
     }
 
     // Unicode
-    var uniLen = text.length;
-    var uniParts;
+    let uniLen = text.length;
+    let uniParts;
     if (uniLen <= 70) {
       uniParts = 1;
     } else {
@@ -369,9 +359,9 @@
    * @param {string} counterId - ID of the counter span
    */
   function updateCharCounter(textarea, counterId) {
-    var counter = document.getElementById(counterId);
+    let counter = document.getElementById(counterId);
     if (!counter) return;
-    var info = calculateSmsParts(textarea.value);
+    let info = calculateSmsParts(textarea.value);
     counter.textContent = info.chars + ' chars / ' + (info.parts || 1) + ' SMS';
     if (info.parts > 3) {
       counter.classList.add('warn');
@@ -381,17 +371,8 @@
   }
 
   // ──────────────────────────────────────────────
-  // Utility: Safe text rendering
+  // Utility: Text rendering
   // ──────────────────────────────────────────────
-
-  /**
-   * Create a text node safely (no innerHTML).
-   * @param {string} text - Text content
-   * @returns {Text}
-   */
-  function safeText(text) {
-    return document.createTextNode(text || '');
-  }
 
   /**
    * Truncate a string to a max length.
@@ -412,7 +393,7 @@
   function formatDate(isoStr) {
     if (!isoStr) return '--';
     try {
-      var d = new Date(isoStr);
+      let d = new Date(isoStr);
       return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return isoStr;
@@ -425,7 +406,7 @@
    * @returns {string}
    */
   function formatEventLabel(eventType) {
-    var labels = {
+    let labels = {
       'ticket_created': 'Ticket Created',
       'status_changed': 'Status Changed',
       'agent_reply': 'Agent Reply',
@@ -479,15 +460,15 @@
 
       // Connected dot: if we have gateway data, we're connected
       dbGet(DS_KEYS.GATEWAY).then(function (gw) {
-        var connected = gw && gw.last_sync;
+        let connected = gw && gw.last_sync;
         setStatusDot('gw-connected-dot', connected ? 'on' : 'off');
         setText('gw-connected-text', connected ? 'Connected' : 'Disconnected');
 
-        var enabled = currentSettings.enabled;
+        let enabled = currentSettings.enabled;
         setStatusDot('gw-enabled-dot', enabled ? 'on' : 'off');
         setText('gw-enabled-text', enabled ? 'Enabled' : 'Disabled');
 
-        var testMode = currentSettings.test_mode;
+        let testMode = currentSettings.test_mode;
         setStatusDot('gw-testmode-dot', testMode ? 'warn' : 'on');
         setText('gw-testmode-text', testMode ? 'Test Mode: ON' : 'Test Mode: OFF');
 
@@ -501,7 +482,7 @@
    */
   function loadRecentActivity() {
     entityGetAll(ENTITY_SMS_LOG, { page_size: 5 }).then(function (result) {
-      var records = (result && result.records) || [];
+      let records = (result && result.records) || [];
       renderActivityTable('recent-activity-body', records, 'No recent activity');
     });
   }
@@ -512,7 +493,7 @@
    * @param {string} text - Text content
    */
   function setText(id, text) {
-    var el = document.getElementById(id);
+    let el = document.getElementById(id);
     if (el) el.textContent = text;
   }
 
@@ -522,7 +503,7 @@
    * @param {string} state - "on", "off", or "warn"
    */
   function setStatusDot(id, state) {
-    var dot = document.getElementById(id);
+    let dot = document.getElementById(id);
     if (!dot) return;
     dot.classList.remove('status-on', 'status-off', 'status-warn');
     dot.classList.add('status-' + state);
@@ -535,7 +516,7 @@
    * @param {string} emptyMsg - Message when no records
    */
   function renderActivityTable(tbodyId, records, emptyMsg) {
-    var tbody = document.getElementById(tbodyId);
+    let tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
     // Clear existing rows
@@ -544,9 +525,9 @@
     }
 
     if (!records || records.length === 0) {
-      var emptyTr = document.createElement('tr');
+      let emptyTr = document.createElement('tr');
       emptyTr.className = 'empty-row';
-      var emptyTd = document.createElement('td');
+      let emptyTd = document.createElement('td');
       emptyTd.setAttribute('colspan', '5');
       emptyTd.textContent = emptyMsg;
       emptyTr.appendChild(emptyTd);
@@ -554,31 +535,31 @@
       return;
     }
 
-    for (var i = 0; i < records.length; i++) {
-      var rec = records[i].data || records[i];
-      var tr = document.createElement('tr');
+    for (let i = 0; i < records.length; i++) {
+      let rec = records[i].data || records[i];
+      let tr = document.createElement('tr');
 
       // Time
-      var tdTime = document.createElement('td');
+      let tdTime = document.createElement('td');
       tdTime.textContent = formatDate(rec.timestamp);
       tr.appendChild(tdTime);
 
       // Event type badge
-      var tdEvent = document.createElement('td');
-      var badge = document.createElement('span');
+      let tdEvent = document.createElement('td');
+      let badge = document.createElement('span');
       badge.className = 'badge badge-event';
       badge.textContent = formatEventLabel(rec.event_type);
       tdEvent.appendChild(badge);
       tr.appendChild(tdEvent);
 
       // Recipient
-      var tdRecip = document.createElement('td');
+      let tdRecip = document.createElement('td');
       tdRecip.textContent = rec.recipient_phone || '--';
       tr.appendChild(tdRecip);
 
       // Message (truncated)
-      var tdMsg = document.createElement('td');
-      var msgSpan = document.createElement('span');
+      let tdMsg = document.createElement('td');
+      let msgSpan = document.createElement('span');
       msgSpan.className = 'text-truncate';
       msgSpan.textContent = truncate(rec.message_preview, 50);
       msgSpan.title = rec.message_preview || '';
@@ -586,9 +567,9 @@
       tr.appendChild(tdMsg);
 
       // Status badge
-      var tdStatus = document.createElement('td');
-      var statusBadge = document.createElement('span');
-      var isSent = rec.status === 'sent';
+      let tdStatus = document.createElement('td');
+      let statusBadge = document.createElement('span');
+      let isSent = rec.status === 'sent';
       statusBadge.className = 'badge ' + (isSent ? 'badge-sent' : 'badge-failed');
       statusBadge.textContent = isSent ? 'Sent' : 'Failed';
       tdStatus.appendChild(statusBadge);
@@ -616,13 +597,13 @@
     addSelectListener('setting-sender-id', function (val) { saveSettingField('active_sender_id', val); });
 
     // Sync Now button
-    var syncBtn = document.getElementById('btn-sync-now');
+    let syncBtn = document.getElementById('btn-sync-now');
     if (syncBtn) {
       syncBtn.addEventListener('click', handleSyncNow);
     }
 
     // Send Test SMS button
-    var testBtn = document.getElementById('btn-send-test');
+    let testBtn = document.getElementById('btn-send-test');
     if (testBtn) {
       testBtn.addEventListener('click', function () {
         showModal('modal-test-sms');
@@ -631,7 +612,7 @@
 
     // Test SMS modal
     setupModalClose('modal-test-sms', 'modal-test-close', 'modal-test-cancel');
-    var sendTestBtn = document.getElementById('modal-test-send');
+    let sendTestBtn = document.getElementById('modal-test-send');
     if (sendTestBtn) {
       sendTestBtn.addEventListener('click', handleSendTestSms);
     }
@@ -671,7 +652,7 @@
    * @param {string[]} senderIds - Available sender IDs
    */
   function populateSenderDropdown(senderIds) {
-    var select = document.getElementById('setting-sender-id');
+    let select = document.getElementById('setting-sender-id');
     if (!select) return;
 
     // Clear existing options
@@ -680,15 +661,15 @@
     }
 
     if (senderIds.length === 0) {
-      var opt = document.createElement('option');
+      let opt = document.createElement('option');
       opt.value = 'KWT-SMS';
       opt.textContent = 'KWT-SMS';
       select.appendChild(opt);
       return;
     }
 
-    for (var i = 0; i < senderIds.length; i++) {
-      var option = document.createElement('option');
+    for (let i = 0; i < senderIds.length; i++) {
+      let option = document.createElement('option');
       option.value = senderIds[i];
       option.textContent = senderIds[i];
       select.appendChild(option);
@@ -719,7 +700,7 @@
    * Handle Sync Now button click: invoke syncGateway or simulate.
    */
   function handleSyncNow() {
-    var btn = document.getElementById('btn-sync-now');
+    let btn = document.getElementById('btn-sync-now');
     if (btn) btn.disabled = true;
 
     if (client && client.request && client.request.invoke) {
@@ -757,11 +738,11 @@
       client.request.invokeTemplate('getSenderIds', {}),
       client.request.invokeTemplate('getCoverage', {})
     ]).then(function (results) {
-      var balance = JSON.parse(results[0].response);
-      var senders = JSON.parse(results[1].response);
-      var coverage = JSON.parse(results[2].response);
+      let balance = JSON.parse(results[0].response);
+      let senders = JSON.parse(results[1].response);
+      let coverage = JSON.parse(results[2].response);
 
-      var gateway = {
+      let gateway = {
         balance: balance.available || 0,
         senderids: senders.senderid || [],
         coverage: coverage.coverage || [],
@@ -776,12 +757,12 @@
    * Handle Send Test SMS from modal.
    */
   function handleSendTestSms() {
-    var phoneInput = document.getElementById('test-phone');
-    var msgInput = document.getElementById('test-message');
+    let phoneInput = document.getElementById('test-phone');
+    let msgInput = document.getElementById('test-message');
     if (!phoneInput || !msgInput) return;
 
-    var phone = phoneInput.value.trim();
-    var message = msgInput.value.trim();
+    let phone = phoneInput.value.trim();
+    let message = msgInput.value.trim();
 
     if (!phone) {
       showToast('Please enter a phone number', 'warning');
@@ -792,7 +773,7 @@
       return;
     }
 
-    var sendBtn = document.getElementById('modal-test-send');
+    let sendBtn = document.getElementById('modal-test-send');
     if (sendBtn) sendBtn.disabled = true;
 
     if (client && client.request && client.request.invoke) {
@@ -827,17 +808,17 @@
    */
   function setupTemplateHandlers() {
     // Pill buttons
-    var pills = document.querySelectorAll('.pill-btn[data-event]');
-    for (var i = 0; i < pills.length; i++) {
+    let pills = document.querySelectorAll('.pill-btn[data-event]');
+    for (let i = 0; i < pills.length; i++) {
       pills[i].addEventListener('click', function (e) {
-        var event = e.currentTarget.getAttribute('data-event');
+        let event = e.currentTarget.getAttribute('data-event');
         selectTemplateEvent(event);
       });
     }
 
     // Character counters
-    var enTextarea = document.getElementById('template-en');
-    var arTextarea = document.getElementById('template-ar');
+    let enTextarea = document.getElementById('template-en');
+    let arTextarea = document.getElementById('template-ar');
     if (enTextarea) {
       enTextarea.addEventListener('input', function () {
         updateCharCounter(enTextarea, 'counter-en');
@@ -850,21 +831,21 @@
     }
 
     // Placeholder chips
-    var chips = document.querySelectorAll('.chip[data-placeholder]');
-    for (var j = 0; j < chips.length; j++) {
+    let chips = document.querySelectorAll('.chip[data-placeholder]');
+    for (let j = 0; j < chips.length; j++) {
       chips[j].addEventListener('click', function (e) {
-        var placeholder = e.currentTarget.getAttribute('data-placeholder');
+        let placeholder = e.currentTarget.getAttribute('data-placeholder');
         insertPlaceholder(placeholder);
       });
     }
 
     // Save and reset buttons
-    var saveBtn = document.getElementById('btn-template-save');
+    let saveBtn = document.getElementById('btn-template-save');
     if (saveBtn) {
       saveBtn.addEventListener('click', handleTemplateSave);
     }
 
-    var resetBtn = document.getElementById('btn-template-reset');
+    let resetBtn = document.getElementById('btn-template-reset');
     if (resetBtn) {
       resetBtn.addEventListener('click', handleTemplateReset);
     }
@@ -888,8 +869,8 @@
     activeTemplateEvent = eventKey;
 
     // Update pills
-    var pills = document.querySelectorAll('.pill-btn[data-event]');
-    for (var i = 0; i < pills.length; i++) {
+    let pills = document.querySelectorAll('.pill-btn[data-event]');
+    for (let i = 0; i < pills.length; i++) {
       pills[i].classList.toggle('active', pills[i].getAttribute('data-event') === eventKey);
     }
 
@@ -900,11 +881,11 @@
    * Render the currently active template into the editor textareas.
    */
   function renderActiveTemplate() {
-    var enTextarea = document.getElementById('template-en');
-    var arTextarea = document.getElementById('template-ar');
+    let enTextarea = document.getElementById('template-en');
+    let arTextarea = document.getElementById('template-ar');
     if (!enTextarea || !arTextarea) return;
 
-    var tmpl = currentTemplates[activeTemplateEvent] || {};
+    let tmpl = currentTemplates[activeTemplateEvent] || {};
     enTextarea.value = tmpl.en || '';
     arTextarea.value = tmpl.ar || '';
 
@@ -918,24 +899,24 @@
    */
   function insertPlaceholder(placeholder) {
     // Try to insert into the last focused textarea
-    var enTextarea = document.getElementById('template-en');
-    var arTextarea = document.getElementById('template-ar');
-    var target = document.activeElement;
+    let enTextarea = document.getElementById('template-en');
+    let arTextarea = document.getElementById('template-ar');
+    let target = document.activeElement;
 
     if (target !== enTextarea && target !== arTextarea) {
       target = enTextarea; // Default to English
     }
 
     if (target) {
-      var start = target.selectionStart;
-      var end = target.selectionEnd;
-      var val = target.value;
+      let start = target.selectionStart;
+      let end = target.selectionEnd;
+      let val = target.value;
       target.value = val.substring(0, start) + placeholder + val.substring(end);
       target.selectionStart = target.selectionEnd = start + placeholder.length;
       target.focus();
 
       // Trigger counter update
-      var counterId = target === enTextarea ? 'counter-en' : 'counter-ar';
+      let counterId = target === enTextarea ? 'counter-en' : 'counter-ar';
       updateCharCounter(target, counterId);
     }
   }
@@ -945,8 +926,8 @@
    */
   function handleTemplateSave() {
     // Save current textarea values to the active event first
-    var enTextarea = document.getElementById('template-en');
-    var arTextarea = document.getElementById('template-ar');
+    let enTextarea = document.getElementById('template-en');
+    let arTextarea = document.getElementById('template-ar');
     if (enTextarea && arTextarea) {
       if (!currentTemplates[activeTemplateEvent]) {
         currentTemplates[activeTemplateEvent] = {};
@@ -966,8 +947,8 @@
    * Reset the active template to defaults.
    */
   function handleTemplateReset() {
-    var defaults = getDefaultTemplates();
-    var tmpl = defaults[activeTemplateEvent];
+    let defaults = getDefaultTemplates();
+    let tmpl = defaults[activeTemplateEvent];
     if (!tmpl) return;
 
     currentTemplates[activeTemplateEvent] = { en: tmpl.en, ar: tmpl.ar };
@@ -1016,7 +997,7 @@
    * Set up event handlers for the logs tab.
    */
   function setupLogHandlers() {
-    var filterBtn = document.getElementById('btn-log-filter');
+    let filterBtn = document.getElementById('btn-log-filter');
     if (filterBtn) {
       filterBtn.addEventListener('click', function () {
         logPage = 1;
@@ -1024,7 +1005,7 @@
       });
     }
 
-    var prevBtn = document.getElementById('btn-log-prev');
+    let prevBtn = document.getElementById('btn-log-prev');
     if (prevBtn) {
       prevBtn.addEventListener('click', function () {
         if (logPage > 1) {
@@ -1034,7 +1015,7 @@
       });
     }
 
-    var nextBtn = document.getElementById('btn-log-next');
+    let nextBtn = document.getElementById('btn-log-next');
     if (nextBtn) {
       nextBtn.addEventListener('click', function () {
         logPage++;
@@ -1042,7 +1023,7 @@
       });
     }
 
-    var clearBtn = document.getElementById('btn-log-clear');
+    let clearBtn = document.getElementById('btn-log-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', function () {
         showModal('modal-clear-logs');
@@ -1051,7 +1032,7 @@
 
     // Clear logs modal
     setupModalClose('modal-clear-logs', 'modal-clear-close', 'modal-clear-cancel');
-    var confirmClear = document.getElementById('modal-clear-confirm');
+    let confirmClear = document.getElementById('modal-clear-confirm');
     if (confirmClear) {
       confirmClear.addEventListener('click', handleClearLogs);
     }
@@ -1061,16 +1042,16 @@
    * Load and render logs from Entity Store with filters.
    */
   function loadLogs() {
-    var eventFilter = document.getElementById('log-filter-event');
-    var statusFilter = document.getElementById('log-filter-status');
+    let eventFilter = document.getElementById('log-filter-event');
+    let statusFilter = document.getElementById('log-filter-status');
 
-    var params = {
+    let params = {
       page: logPage,
       page_size: LOG_PAGE_SIZE
     };
 
     // Build filter object
-    var filter = {};
+    let filter = {};
     if (eventFilter && eventFilter.value) {
       filter.event_type = eventFilter.value;
     }
@@ -1082,13 +1063,13 @@
     }
 
     entityGetAll(ENTITY_SMS_LOG, params).then(function (result) {
-      var records = (result && result.records) || [];
+      let records = (result && result.records) || [];
       renderActivityTable('log-table-body', records, 'No SMS logs yet');
 
       // Update pagination
-      var prevBtn = document.getElementById('btn-log-prev');
-      var nextBtn = document.getElementById('btn-log-next');
-      var pageInfo = document.getElementById('log-page-info');
+      let prevBtn = document.getElementById('btn-log-prev');
+      let nextBtn = document.getElementById('btn-log-next');
+      let pageInfo = document.getElementById('log-page-info');
 
       if (prevBtn) prevBtn.disabled = logPage <= 1;
       if (nextBtn) nextBtn.disabled = !result || !result.next;
@@ -1118,12 +1099,12 @@
    * Set up event handlers for the admin alerts tab.
    */
   function setupAlertHandlers() {
-    var addBtn = document.getElementById('btn-alert-add');
+    let addBtn = document.getElementById('btn-alert-add');
     if (addBtn) {
       addBtn.addEventListener('click', handleAddAlertPhone);
     }
 
-    var phoneInput = document.getElementById('alert-phone-input');
+    let phoneInput = document.getElementById('alert-phone-input');
     if (phoneInput) {
       phoneInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
@@ -1132,7 +1113,7 @@
       });
     }
 
-    var saveBtn = document.getElementById('btn-alert-save');
+    let saveBtn = document.getElementById('btn-alert-save');
     if (saveBtn) {
       saveBtn.addEventListener('click', handleSaveAlerts);
     }
@@ -1155,8 +1136,8 @@
    * Render the phone list for admin alerts.
    */
   function renderAlertPhones() {
-    var list = document.getElementById('alert-phone-list');
-    var emptyMsg = document.getElementById('alert-phones-empty');
+    let list = document.getElementById('alert-phone-list');
+    let emptyMsg = document.getElementById('alert-phones-empty');
     if (!list) return;
 
     // Clear existing
@@ -1164,22 +1145,22 @@
       list.removeChild(list.firstChild);
     }
 
-    var phones = (currentAdminAlerts && currentAdminAlerts.phones) || [];
+    let phones = (currentAdminAlerts && currentAdminAlerts.phones) || [];
 
     if (emptyMsg) {
       emptyMsg.style.display = phones.length === 0 ? 'block' : 'none';
     }
 
-    for (var i = 0; i < phones.length; i++) {
-      var li = document.createElement('li');
+    for (let i = 0; i < phones.length; i++) {
+      let li = document.createElement('li');
       li.className = 'phone-item';
 
-      var numSpan = document.createElement('span');
+      let numSpan = document.createElement('span');
       numSpan.className = 'phone-number';
       numSpan.textContent = phones[i];
       li.appendChild(numSpan);
 
-      var removeBtn = document.createElement('button');
+      let removeBtn = document.createElement('button');
       removeBtn.className = 'phone-remove';
       removeBtn.textContent = 'Remove';
       removeBtn.setAttribute('data-phone', phones[i]);
@@ -1194,10 +1175,10 @@
    * Handle adding a new alert phone number.
    */
   function handleAddAlertPhone() {
-    var input = document.getElementById('alert-phone-input');
+    let input = document.getElementById('alert-phone-input');
     if (!input) return;
 
-    var phone = input.value.trim();
+    let phone = input.value.trim();
     if (!phone) {
       showToast('Please enter a phone number', 'warning');
       return;
@@ -1230,10 +1211,10 @@
    * @param {Event} e - Click event
    */
   function handleRemoveAlertPhone(e) {
-    var phone = e.currentTarget.getAttribute('data-phone');
+    let phone = e.currentTarget.getAttribute('data-phone');
     if (!currentAdminAlerts || !phone) return;
 
-    var idx = currentAdminAlerts.phones.indexOf(phone);
+    let idx = currentAdminAlerts.phones.indexOf(phone);
     if (idx !== -1) {
       currentAdminAlerts.phones.splice(idx, 1);
       renderAlertPhones();
@@ -1272,7 +1253,7 @@
    * @param {string} modalId - Modal overlay element ID
    */
   function showModal(modalId) {
-    var modal = document.getElementById(modalId);
+    let modal = document.getElementById(modalId);
     if (modal) modal.classList.add('visible');
   }
 
@@ -1281,7 +1262,7 @@
    * @param {string} modalId - Modal overlay element ID
    */
   function hideModal(modalId) {
-    var modal = document.getElementById(modalId);
+    let modal = document.getElementById(modalId);
     if (modal) modal.classList.remove('visible');
   }
 
@@ -1292,9 +1273,9 @@
    * @param {string} cancelId - Cancel button element ID
    */
   function setupModalClose(modalId, closeId, cancelId) {
-    var closeBtn = document.getElementById(closeId);
-    var cancelBtn = document.getElementById(cancelId);
-    var modal = document.getElementById(modalId);
+    let closeBtn = document.getElementById(closeId);
+    let cancelBtn = document.getElementById(cancelId);
+    let modal = document.getElementById(modalId);
 
     if (closeBtn) {
       closeBtn.addEventListener('click', function () { hideModal(modalId); });
@@ -1321,7 +1302,7 @@
    * @param {boolean} checked - Whether to check
    */
   function setCheckbox(id, checked) {
-    var el = document.getElementById(id);
+    let el = document.getElementById(id);
     if (el) el.checked = !!checked;
   }
 
@@ -1331,7 +1312,7 @@
    * @returns {boolean}
    */
   function getCheckbox(id) {
-    var el = document.getElementById(id);
+    let el = document.getElementById(id);
     return el ? el.checked : false;
   }
 
@@ -1341,7 +1322,7 @@
    * @param {string} value - Option value to select
    */
   function setSelectValue(id, value) {
-    var el = document.getElementById(id);
+    let el = document.getElementById(id);
     if (el && value) el.value = value;
   }
 
@@ -1351,7 +1332,7 @@
    * @param {Function} callback - Called with boolean value
    */
   function addChangeListener(id, callback) {
-    var el = document.getElementById(id);
+    let el = document.getElementById(id);
     if (el) {
       el.addEventListener('change', function () {
         callback(el.checked);
@@ -1365,7 +1346,7 @@
    * @param {Function} callback - Called with selected value
    */
   function addSelectListener(id, callback) {
-    var el = document.getElementById(id);
+    let el = document.getElementById(id);
     if (el) {
       el.addEventListener('change', function () {
         callback(el.value);

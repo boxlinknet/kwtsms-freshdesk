@@ -287,7 +287,7 @@ async function onAppInstallHandler(args) {
     await $db.set(DS_KEYS.SETTINGS, { data: JSON.stringify(DEFAULT_SETTINGS) });
 
     // Initialize default templates
-    var defaultTemplates = {
+    const defaultTemplates = {
       ticket_created: {
         en: "Your support ticket #{{ticket_id}} has been created. Subject: {{ticket_subject}}. We'll get back to you soon. - {{company_name}}",
         ar: "\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u062a\u0630\u0643\u0631\u0629 \u0627\u0644\u062f\u0639\u0645 \u0631\u0642\u0645 #{{ticket_id}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0633\u0646\u0639\u0648\u062f \u0625\u0644\u064a\u0643 \u0642\u0631\u064a\u0628\u0627. - {{company_name}}"
@@ -346,8 +346,8 @@ async function onAppUninstallHandler(args) {
   log('App uninstalling. Cleaning up...');
 
   try {
-    var keys = [DS_KEYS.SETTINGS, DS_KEYS.GATEWAY, DS_KEYS.TEMPLATES, DS_KEYS.ADMIN_ALERTS, DS_KEYS.STATS];
-    for (var i = 0; i < keys.length; i++) {
+    const keys = [DS_KEYS.SETTINGS, DS_KEYS.GATEWAY, DS_KEYS.TEMPLATES, DS_KEYS.ADMIN_ALERTS, DS_KEYS.STATS];
+    for (let i = 0; i < keys.length; i++) {
       try { await $db.delete(keys[i]); } catch (e) { /* ignore */ }
     }
     try { await $db.entity.deleteAll(ENTITY.SMS_LOG); } catch (e) { /* ignore */ }
@@ -365,12 +365,12 @@ async function onAppUninstallHandler(args) {
 // ──────────────────────────────────────────────
 
 async function manualSendSms(args) {
-  var smiData = args.data || {};
-  var phone = smiData.phone;
-  var message = smiData.message;
-  var ticket_id = smiData.ticket_id;
-  var $db = args.$db;
-  var $request = args.$request;
+  const smiData = args.data || {};
+  const phone = smiData.phone;
+  const message = smiData.message;
+  const ticket_id = smiData.ticket_id;
+  const $db = args.$db;
+  const $request = args.$request;
 
   if (!phone || !message) {
     return { success: false, message: 'Phone and message are required' };

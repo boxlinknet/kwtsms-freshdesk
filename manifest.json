@@ -13,12 +13,24 @@
         }
       },
       "events": {
-        "onTicketCreate": { "handler": "onTicketCreateHandler" },
-        "onTicketUpdate": { "handler": "onTicketUpdateHandler" },
-        "onConversationCreate": { "handler": "onConversationCreateHandler" },
-        "onAppInstall": { "handler": "onAppInstallHandler" },
-        "onAppUninstall": { "handler": "onAppUninstallHandler" },
-        "onScheduledEvent": { "handler": "onScheduledEventHandler" }
+        "onTicketCreate": {
+          "handler": "onTicketCreateHandler"
+        },
+        "onTicketUpdate": {
+          "handler": "onTicketUpdateHandler"
+        },
+        "onConversationCreate": {
+          "handler": "onConversationCreateHandler"
+        },
+        "onAppInstall": {
+          "handler": "onAppInstallHandler"
+        },
+        "onAppUninstall": {
+          "handler": "onAppUninstallHandler"
+        },
+        "onScheduledEvent": {
+          "handler": "onScheduledEventHandler"
+        }
       }
     }
   },
@@ -30,8 +42,10 @@
     "validatePhone": {}
   },
   "engines": {
-    "node": "18.x",
-    "fdk": "9.x"
+    "node": "18.20.8",
+    "fdk": "9.8.2"
   },
-  "whitelisted-domains": ["https://www.kwtsms.com"]
+  "whitelisted-domains": [
+    "https://www.kwtsms.com"
+  ]
 }

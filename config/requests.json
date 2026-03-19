@@ -8,7 +8,9 @@
       "headers": {
         "Content-Type": "application/json",
         "Accept": "application/json"
-      },
+      }
+    },
+    "options": {
       "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
     }
   },
@@ -21,7 +23,9 @@
       "headers": {
         "Content-Type": "application/json",
         "Accept": "application/json"
-      },
+      }
+    },
+    "options": {
       "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\",\"sender\":\"<%= context.sender %>\",\"mobile\":\"<%= context.mobile %>\",\"message\":\"<%= context.message %>\",\"test\":\"<%= context.test %>\"}"
     }
   },
@@ -34,7 +38,9 @@
       "headers": {
         "Content-Type": "application/json",
         "Accept": "application/json"
-      },
+      }
+    },
+    "options": {
       "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
     }
   },
@@ -47,7 +53,9 @@
       "headers": {
         "Content-Type": "application/json",
         "Accept": "application/json"
-      },
+      }
+    },
+    "options": {
       "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
     }
   },
@@ -60,7 +68,9 @@
       "headers": {
         "Content-Type": "application/json",
         "Accept": "application/json"
-      },
+      }
+    },
+    "options": {
       "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\",\"mobile\":\"<%= context.mobile %>\"}"
     }
   }
