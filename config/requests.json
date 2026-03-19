@@ -9,9 +9,6 @@
         "Content-Type": "application/json",
         "Accept": "application/json"
       }
-    },
-    "options": {
-      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
     }
   },
   "sendSms": {
@@ -24,9 +21,6 @@
         "Content-Type": "application/json",
         "Accept": "application/json"
       }
-    },
-    "options": {
-      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\",\"sender\":\"<%= context.sender %>\",\"mobile\":\"<%= context.mobile %>\",\"message\":\"<%= context.message %>\",\"test\":\"<%= context.test %>\"}"
     }
   },
   "getSenderIds": {
@@ -39,9 +33,6 @@
         "Content-Type": "application/json",
         "Accept": "application/json"
       }
-    },
-    "options": {
-      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
     }
   },
   "getCoverage": {
@@ -54,9 +45,6 @@
         "Content-Type": "application/json",
         "Accept": "application/json"
       }
-    },
-    "options": {
-      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\"}"
     }
   },
   "validatePhone": {
@@ -69,9 +57,6 @@
         "Content-Type": "application/json",
         "Accept": "application/json"
       }
-    },
-    "options": {
-      "body": "{\"username\":\"<%= encode(iparam.kwtsms_username) %>\",\"password\":\"<%= encode(iparam.kwtsms_password) %>\",\"mobile\":\"<%= context.mobile %>\"}"
     }
   }
 }

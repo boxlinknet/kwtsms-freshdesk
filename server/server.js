@@ -17,6 +17,15 @@ const {
 } = require('./lib/constants');
 
 // ──────────────────────────────────────────────
+// Helper: Get API credentials from secure iparams
+// ──────────────────────────────────────────────
+
+async function getCredentials(args) {
+  const iparams = await args.iparams.get('kwtsms_username', 'kwtsms_password');
+  return { username: iparams.kwtsms_username, password: iparams.kwtsms_password };
+}
+
+// ──────────────────────────────────────────────
 // Helper: Load settings, templates, admin alerts
 // ──────────────────────────────────────────────
 
@@ -60,6 +69,7 @@ async function onTicketCreateHandler(args) {
   const settings = await loadSettings($db);
   if (!settings || !settings.enabled) return;
 
+  const credentials = await getCredentials(args);
   const templates = await loadTemplates($db);
   const companyName = await getCompanyName(args);
   const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
@@ -70,7 +80,7 @@ async function onTicketCreateHandler(args) {
     const message = resolveTemplate(templates, SMS_EVENT.TICKET_CREATED, settings.language, placeholders);
     if (message) {
       await send({
-        $request, $db,
+        $request, $db, credentials,
         phones: [customerPhone],
         message,
         eventType: SMS_EVENT.TICKET_CREATED,
@@ -85,7 +95,7 @@ async function onTicketCreateHandler(args) {
     const adminMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_NEW_TICKET, settings.language, placeholders);
     if (adminMsg) {
       await send({
-        $request, $db,
+        $request, $db, credentials,
         phones: adminAlerts.phones,
         message: adminMsg,
         eventType: SMS_EVENT.ADMIN_NEW_TICKET,
@@ -100,7 +110,7 @@ async function onTicketCreateHandler(args) {
     const highMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_HIGH_PRIORITY, settings.language, placeholders);
     if (highMsg) {
       await send({
-        $request, $db,
+        $request, $db, credentials,
         phones: adminAlerts.phones,
         message: highMsg,
         eventType: SMS_EVENT.ADMIN_HIGH_PRIORITY,
@@ -123,6 +133,7 @@ async function onTicketUpdateHandler(args) {
   const settings = await loadSettings($db);
   if (!settings || !settings.enabled) return;
 
+  const credentials = await getCredentials(args);
   const templates = await loadTemplates($db);
   const companyName = await getCompanyName(args);
   const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
@@ -136,7 +147,7 @@ async function onTicketUpdateHandler(args) {
         const message = resolveTemplate(templates, SMS_EVENT.STATUS_CHANGED, settings.language, placeholders);
         if (message) {
           await send({
-            $request, $db,
+            $request, $db, credentials,
             phones: [customerPhone],
             message,
             eventType: SMS_EVENT.STATUS_CHANGED,
@@ -158,7 +169,7 @@ async function onTicketUpdateHandler(args) {
         const escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
         if (escalMsg) {
           await send({
-            $request, $db,
+            $request, $db, credentials,
             phones: adminAlerts.phones,
             message: escalMsg,
             eventType: SMS_EVENT.ADMIN_ESCALATION,
@@ -190,6 +201,7 @@ async function onConversationCreateHandler(args) {
   const customerPhone = payload.requester?.phone;
   if (!customerPhone) return;
 
+  const credentials = await getCredentials(args);
   const templates = await loadTemplates($db);
   const companyName = await getCompanyName(args);
   const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
@@ -197,7 +209,7 @@ async function onConversationCreateHandler(args) {
   const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
   if (message) {
     await send({
-      $request, $db,
+      $request, $db, credentials,
       phones: [customerPhone],
       message,
       eventType: SMS_EVENT.AGENT_REPLY,
@@ -224,13 +236,16 @@ async function onScheduledEventHandler(args) {
   log('Running daily sync...');
 
   try {
-    const balanceResp = await $request.invokeTemplate('checkBalance', {});
+    const creds = await getCredentials(args);
+    const credBody = JSON.stringify(creds);
+
+    const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
     const balance = JSON.parse(balanceResp.response);
 
-    const senderResp = await $request.invokeTemplate('getSenderIds', {});
+    const senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
     const senders = JSON.parse(senderResp.response);
 
-    const coverageResp = await $request.invokeTemplate('getCoverage', {});
+    const coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
     const coverage = JSON.parse(coverageResp.response);
 
     const gateway = {
@@ -265,13 +280,16 @@ async function onAppInstallHandler(args) {
 
   try {
     // Initial sync
-    const balanceResp = await $request.invokeTemplate('checkBalance', {});
+    const creds = await getCredentials(args);
+    const credBody = JSON.stringify(creds);
+
+    const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
     const balance = JSON.parse(balanceResp.response);
 
-    const senderResp = await $request.invokeTemplate('getSenderIds', {});
+    const senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
     const senders = JSON.parse(senderResp.response);
 
-    const coverageResp = await $request.invokeTemplate('getCoverage', {});
+    const coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
     const coverage = JSON.parse(coverageResp.response);
 
     await $db.set(DS_KEYS.GATEWAY, {
@@ -376,9 +394,12 @@ async function manualSendSms(args) {
     return { success: false, message: 'Phone and message are required' };
   }
 
+  const credentials = await getCredentials(args);
+
   return await send({
     $request: $request,
     $db: $db,
+    credentials: credentials,
     phones: [phone],
     message: message,
     eventType: SMS_EVENT.MANUAL_SEND,

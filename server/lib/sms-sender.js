@@ -25,7 +25,7 @@ const { DS_KEYS, KWTSMS, NON_RETRYABLE_ERRORS } = require('./constants');
  * @returns {Promise<{success: boolean, message: string}>}
  */
 async function send(params) {
-  const { $request, $db, phones, message, eventType, ticketId } = params;
+  const { $request, $db, credentials, phones, message, eventType, ticketId } = params;
 
   // --- GUARD 1: Plugin enabled ---
   let settings;
@@ -92,9 +92,9 @@ async function send(params) {
 
   let result;
   if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
-    result = await sendBatch($request, recipients.join(','), cleanedMessage, sender, testFlag);
+    result = await sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
   } else {
-    result = await bulkSend($request, recipients, cleanedMessage, sender, testFlag, settings.debug);
+    result = await bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
   }
 
   // --- LOG & STATS ---
@@ -134,26 +134,19 @@ async function send(params) {
 }
 
 /**
- * Escape a string for safe interpolation into a JSON string value.
- * Handles double quotes, backslashes, and control characters.
- */
-function jsonEscape(str) {
-  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
-}
-
-/**
  * Send a single batch (up to 200 numbers).
  * @returns {Promise<Object>} kwtSMS API response
  */
-async function sendBatch($request, mobile, message, sender, test) {
+async function sendBatch($request, credentials, mobile, message, sender, test) {
   try {
     const response = await $request.invokeTemplate('sendSms', {
-      context: {
-        mobile,
-        message: jsonEscape(message),
-        sender: jsonEscape(sender),
-        test
-      }
+      body: JSON.stringify({
+        ...credentials,
+        sender: sender,
+        mobile: mobile,
+        message: message,
+        test: test
+      })
     });
     return JSON.parse(response.response);
   } catch (err) {
@@ -165,7 +158,7 @@ async function sendBatch($request, mobile, message, sender, test) {
 /**
  * Send to >200 numbers by chunking with delays and ERR013 backoff.
  */
-async function bulkSend($request, recipients, message, sender, test, debug) {
+async function bulkSend($request, credentials, recipients, message, sender, test, debug) {
   let lastResult = { result: 'ERROR', description: 'No batches sent' };
 
   for (let i = 0; i < recipients.length; i += KWTSMS.MAX_BATCH_SIZE) {
@@ -177,7 +170,7 @@ async function bulkSend($request, recipients, message, sender, test, debug) {
 
     let attempt = 0;
     while (attempt <= KWTSMS.MAX_RETRIES) {
-      const result = await sendBatch($request, batch.join(','), message, sender, test);
+      const result = await sendBatch($request, credentials, batch.join(','), message, sender, test);
 
       if (result.code === 'ERR013' && attempt < KWTSMS.MAX_RETRIES) {
         debugLog(`ERR013 queue full, backing off ${KWTSMS.ERR013_BACKOFF_MS[attempt]}ms`, debug);

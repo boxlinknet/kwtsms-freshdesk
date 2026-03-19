@@ -72,9 +72,6 @@
   /** @type {Object} Current loaded admin alerts */
   let currentAdminAlerts = null;
 
-  /** @type {Object} Current loaded gateway info */
-  let currentGateway = null;
-
   /** @type {string} Currently selected template event */
   let activeTemplateEvent = 'ticket_created';
 
@@ -444,7 +441,6 @@
 
     // Balance comes from gateway data
     dbGet(DS_KEYS.GATEWAY).then(function (gw) {
-      currentGateway = gw;
       if (gw && typeof gw.balance !== 'undefined') {
         setText('stat-balance', String(gw.balance));
       }
@@ -633,7 +629,6 @@
 
     // Gateway info
     dbGet(DS_KEYS.GATEWAY).then(function (gw) {
-      currentGateway = gw;
       if (gw) {
         setText('info-gw-status', gw.last_sync ? 'Connected' : 'Disconnected');
         setText('info-gw-balance', String(gw.balance || 0) + ' credits');
@@ -733,11 +728,18 @@
   function syncGatewayDirect() {
     if (!client) return Promise.reject(new Error('No client'));
 
-    return Promise.all([
-      client.request.invokeTemplate('checkBalance', {}),
-      client.request.invokeTemplate('getSenderIds', {}),
-      client.request.invokeTemplate('getCoverage', {})
-    ]).then(function (results) {
+    return client.iparams.get('kwtsms_username', 'kwtsms_password').then(function (iparams) {
+      let credBody = JSON.stringify({
+        username: iparams.kwtsms_username,
+        password: iparams.kwtsms_password
+      });
+
+      return Promise.all([
+        client.request.invokeTemplate('checkBalance', { body: credBody }),
+        client.request.invokeTemplate('getSenderIds', { body: credBody }),
+        client.request.invokeTemplate('getCoverage', { body: credBody })
+      ]);
+    }).then(function (results) {
       let balance = JSON.parse(results[0].response);
       let senders = JSON.parse(results[1].response);
       let coverage = JSON.parse(results[2].response);

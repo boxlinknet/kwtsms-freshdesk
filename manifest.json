@@ -31,21 +31,18 @@
         "onScheduledEvent": {
           "handler": "onScheduledEventHandler"
         }
+      },
+      "requests": {
+        "checkBalance": {},
+        "sendSms": {},
+        "getSenderIds": {},
+        "getCoverage": {},
+        "validatePhone": {}
       }
     }
-  },
-  "requests": {
-    "checkBalance": {},
-    "sendSms": {},
-    "getSenderIds": {},
-    "getCoverage": {},
-    "validatePhone": {}
   },
   "engines": {
     "node": "18.20.8",
     "fdk": "9.8.2"
-  },
-  "whitelisted-domains": [
-    "https://www.kwtsms.com"
-  ]
+  }
 }
