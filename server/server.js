@@ -1,33 +1,586 @@
 /**
- * server.js - Freshdesk serverless event handlers and SMI functions
- * Related: server/lib/*.js, config/requests.json, entities/entities.json
+ * server.js - kwtSMS Freshdesk serverless app (consolidated single file)
  *
- * Exports event handlers for: ticket create, ticket update, conversation create,
- * app install/uninstall, scheduled events. Also exports manualSendSms (SMI).
+ * All code is inlined here for FDK sandbox compatibility.
+ * The lib/ files remain for unit testing but are NOT imported here.
+ * ZERO require() statements. Uses exports = {} pattern for FDK.
  */
 
-const { send } = require('./lib/sms-sender');
-const { resolveTemplate, buildPlaceholderData } = require('./lib/template-engine');
-const { cleanMessage } = require('./lib/message-utils');
-const { normalize, validate } = require('./lib/phone-utils');
-const { logSmsResult, updateStats, resetCounters, log, debugLog } = require('./lib/logger');
-const {
-  DS_KEYS, ENTITY, SMS_EVENT, TICKET_STATUS, TICKET_PRIORITY,
-  DEFAULT_SETTINGS, DEFAULT_ADMIN_ALERTS, DEFAULT_STATS
-} = require('./lib/constants');
+// ======================================================================
+// CONSTANTS
+// ======================================================================
 
-// ──────────────────────────────────────────────
-// Helper: Get API credentials from secure iparams
-// ──────────────────────────────────────────────
+// Freshdesk ticket status codes
+const TICKET_STATUS = {
+  OPEN: 2,
+  PENDING: 3,
+  RESOLVED: 4,
+  CLOSED: 5
+};
+
+// Freshdesk ticket priority codes
+const TICKET_PRIORITY = {
+  LOW: 1,
+  MEDIUM: 2,
+  HIGH: 3,
+  URGENT: 4
+};
+
+// Data Storage key names (KV Store)
+const DS_KEYS = {
+  SETTINGS: 'kwtsms_settings',
+  GATEWAY: 'kwtsms_gateway',
+  TEMPLATES: 'kwtsms_templates',
+  ADMIN_ALERTS: 'kwtsms_admin_alerts',
+  STATS: 'kwtsms_stats'
+};
+
+// Entity Store entity name
+const ENTITY = {
+  SMS_LOG: 'sms_log'
+};
+
+// SMS event types (used in templates and logs)
+const SMS_EVENT = {
+  TICKET_CREATED: 'ticket_created',
+  STATUS_CHANGED: 'status_changed',
+  AGENT_REPLY: 'agent_reply',
+  ADMIN_NEW_TICKET: 'admin_new_ticket',
+  ADMIN_HIGH_PRIORITY: 'admin_high_priority',
+  ADMIN_ESCALATION: 'admin_escalation',
+  MANUAL_SEND: 'manual_send'
+};
+
+// Default settings (written on app install)
+const DEFAULT_SETTINGS = {
+  enabled: false,
+  test_mode: true,
+  debug: false,
+  language: 'en',
+  active_sender_id: 'KWT-SMS',
+  schema_version: 1
+};
+
+// Default admin alerts config
+const DEFAULT_ADMIN_ALERTS = {
+  phones: [],
+  events: {
+    new_ticket: true,
+    high_priority: true,
+    escalation: true
+  }
+};
+
+// Default stats
+const DEFAULT_STATS = {
+  total_sent: 0,
+  total_failed: 0,
+  today_sent: 0,
+  today_failed: 0,
+  month_sent: 0,
+  month_failed: 0,
+  last_reset_date: '',
+  last_reset_month: ''
+};
+
+// kwtSMS API constants
+const KWTSMS = {
+  MAX_BATCH_SIZE: 200,
+  BATCH_DELAY_MS: 500,
+  ERR013_BACKOFF_MS: [30000, 60000, 120000],
+  MAX_RETRIES: 3,
+  GSM7_PAGE_SIZE: 160,
+  GSM7_MULTIPAGE_SIZE: 153,
+  UNICODE_PAGE_SIZE: 70,
+  UNICODE_MULTIPAGE_SIZE: 67,
+  MAX_PAGES: 7
+};
+
+// kwtSMS error codes that should not be retried
+const NON_RETRYABLE_ERRORS = [
+  'ERR001', 'ERR002', 'ERR003', 'ERR004', 'ERR005',
+  'ERR006', 'ERR007', 'ERR008', 'ERR009', 'ERR010',
+  'ERR011', 'ERR012', 'ERR024', 'ERR025', 'ERR026',
+  'ERR027', 'ERR028', 'ERR031', 'ERR032'
+];
+
+// Status labels for Freshdesk statuses (used in template replacement)
+const STATUS_LABELS = {
+  en: { 2: 'Open', 3: 'Pending', 4: 'Resolved', 5: 'Closed' },
+  ar: { 2: '\u0645\u0641\u062a\u0648\u062d\u0629', 3: '\u0645\u0639\u0644\u0642\u0629', 4: '\u062a\u0645 \u0627\u0644\u062d\u0644', 5: '\u0645\u063a\u0644\u0642\u0629' }
+};
+
+// Priority labels
+const PRIORITY_LABELS = {
+  en: { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' },
+  ar: { 1: '\u0645\u0646\u062e\u0641\u0636\u0629', 2: '\u0645\u062a\u0648\u0633\u0637\u0629', 3: '\u0639\u0627\u0644\u064a\u0629', 4: '\u0639\u0627\u062c\u0644\u0629' }
+};
+
+// ======================================================================
+// PHONE UTILS
+// ======================================================================
+
+// Arabic-Indic and Extended Arabic-Indic digit mapping
+const ARABIC_DIGITS = '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669';
+const EXTENDED_DIGITS = '\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9';
+
+/**
+ * Normalize a phone number to kwtSMS-accepted format (digits only).
+ * Strips all non-digit chars, converts Arabic digits, strips leading zeros.
+ */
+function normalize(phone) {
+  if (!phone) return '';
+  let result = String(phone);
+
+  // Convert Arabic-Indic digits to Latin
+  for (let i = 0; i < 10; i++) {
+    result = result.replace(new RegExp(ARABIC_DIGITS[i], 'g'), String(i));
+    result = result.replace(new RegExp(EXTENDED_DIGITS[i], 'g'), String(i));
+  }
+
+  // Strip all non-digit characters
+  result = result.replace(/\D/g, '');
+
+  // Strip leading zeros (handles 00 prefix like 0096598765432)
+  result = result.replace(/^0+/, '');
+
+  return result;
+}
+
+/**
+ * Validate a normalized phone number.
+ * Must be 7-15 digits (ITU-T E.164 range).
+ */
+function validate(phone) {
+  if (!phone) return false;
+  return /^\d{7,15}$/.test(phone);
+}
+
+/**
+ * Remove duplicate phone numbers from an array.
+ * Preserves order (first occurrence kept).
+ */
+function deduplicate(phones) {
+  return [...new Set(phones)];
+}
+
+// ======================================================================
+// MESSAGE UTILS
+// ======================================================================
+
+const HTML_ENTITIES = {
+  '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
+  '&apos;': "'", '&#39;': "'", '&nbsp;': ' '
+};
+
+/**
+ * Clean a message for SMS sending.
+ * 1. Strip HTML tags
+ * 2. Decode HTML entities
+ * 3. Convert Arabic/Hindi digits to Latin
+ * 4. Strip emoji
+ * 5. Strip zero-width and hidden Unicode characters
+ * 6. Trim whitespace
+ */
+function cleanMessage(message) {
+  if (!message) return '';
+  let text = String(message);
+
+  // 1. Strip HTML tags
+  text = text.replace(/<[^>]*>/g, '');
+
+  // 2. Decode named HTML entities
+  text = text.replace(/&[a-zA-Z]+;/g, (match) => HTML_ENTITIES[match] || match);
+  text = text.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
+  text = text.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => String.fromCharCode(parseInt(code, 16)));
+
+  // 3. Convert Arabic-Indic digits to Latin
+  for (let i = 0; i < 10; i++) {
+    text = text.replace(new RegExp(ARABIC_DIGITS[i], 'g'), String(i));
+    text = text.replace(new RegExp(EXTENDED_DIGITS[i], 'g'), String(i));
+  }
+
+  // 4. Strip emoji
+  text = text.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
+  text = text.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+  text = text.replace(/[\u{1F680}-\u{1F6FF}]/gu, '');
+  text = text.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '');
+  text = text.replace(/[\u{2600}-\u{26FF}]/gu, '');
+  text = text.replace(/[\u{2700}-\u{27BF}]/gu, '');
+  text = text.replace(/[\u{FE00}-\u{FE0F}]/gu, '');
+  text = text.replace(/[\u{1F900}-\u{1F9FF}]/gu, '');
+  text = text.replace(/[\u{1FA00}-\u{1FA6F}]/gu, '');
+  text = text.replace(/[\u{1FA70}-\u{1FAFF}]/gu, '');
+  text = text.replace(/[\u{200D}]/gu, '');
+
+  // 5. Strip zero-width and hidden Unicode characters
+  text = text.replace(/[\u200B\u200C\u200E\u200F]/g, '');
+  text = text.replace(/[\uFEFF]/g, '');
+  text = text.replace(/[\u00AD]/g, '');
+  text = text.replace(/[\u2028\u2029]/g, '');
+  text = text.replace(/[\u202A-\u202E]/g, '');
+
+  // 6. Trim whitespace
+  text = text.trim();
+
+  return text;
+}
+
+/**
+ * Detect if text contains non-GSM7 characters (requires Unicode encoding).
+ * Values inlined directly instead of referencing KWTSMS constant.
+ */
+function isUnicode(text) {
+  const gsm7 = /^[@\u00A3\u0024\u00A5\u00E8\u00E9\u00F9\u00EC\u00F2\u00C7\n\u00D8\u00F8\r\u00C5\u00E5\u0394_\u03A6\u0393\u039B\u03A9\u03A0\u03A8\u03A3\u0398\u039E \u00C6\u00E6\u00DF\u00C9!"#\u00A4%&'()*+,\-.\/0-9:;<=>?\u00A1A-Z\u00C4\u00D6\u00D1\u00DCa-z\u00E4\u00F6\u00F1\u00FC\u00E0\u000C^{}\[~\]|\u20AC]*$/;
+  return !gsm7.test(text);
+}
+
+/**
+ * Calculate how many SMS parts a message will use.
+ * Values inlined: GSM7 single=160, multi=153; Unicode single=70, multi=67.
+ */
+function calculateSmsParts(text) {
+  if (!text) return { chars: 0, parts: 0, isUnicode: false };
+
+  const unicode = isUnicode(text);
+  const chars = text.length;
+
+  let parts;
+  if (unicode) {
+    if (chars <= 70) parts = 1;
+    else parts = Math.ceil(chars / 67);
+  } else {
+    if (chars <= 160) parts = 1;
+    else parts = Math.ceil(chars / 153);
+  }
+
+  return { chars, parts, isUnicode: unicode };
+}
+
+// ======================================================================
+// TEMPLATE ENGINE
+// ======================================================================
+
+/**
+ * Replace {{placeholder}} tokens in a template string.
+ * Unknown placeholders are replaced with empty string.
+ */
+function replacePlaceholders(template, data) {
+  if (!template) return '';
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    const value = data[key];
+    return (value !== null && value !== undefined) ? String(value) : '';
+  });
+}
+
+/**
+ * Resolve a template for a given event type, language, and data.
+ * Falls back to English if the requested language is unavailable.
+ */
+function resolveTemplate(templates, eventType, language, data) {
+  const eventTemplates = templates[eventType];
+  if (!eventTemplates) return '';
+  const template = eventTemplates[language] || eventTemplates['en'] || '';
+  return replacePlaceholders(template, data);
+}
+
+/**
+ * Build placeholder data object from a Freshdesk event payload.
+ */
+function buildPlaceholderData(payload, companyName, language) {
+  const ticket = payload.data?.ticket || {};
+  const requester = payload.data?.requester || {};
+  const statusCode = ticket.status;
+  const priorityCode = ticket.priority;
+
+  return {
+    ticket_id: ticket.id || '',
+    ticket_subject: ticket.subject || '',
+    ticket_status: (STATUS_LABELS[language] || STATUS_LABELS.en)[statusCode] || '',
+    ticket_priority: (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[priorityCode] || '',
+    requester_name: requester.name || '',
+    requester_phone: requester.phone || '',
+    requester_email: requester.email || '',
+    agent_name: ticket.responder_name || '',
+    group_name: ticket.group_name || '',
+    company_name: companyName || ''
+  };
+}
+
+// ======================================================================
+// LOGGER
+// ======================================================================
+
+/**
+ * Log an SMS send result to Entity Store.
+ * Non-fatal: catches and console.error on failure.
+ */
+async function logSmsResult($db, entry) {
+  try {
+    await $db.entity.create(ENTITY.SMS_LOG, {
+      timestamp: new Date().toISOString(),
+      event_type: entry.event_type,
+      recipient_phone: entry.recipient_phone,
+      message_preview: (entry.message_preview || '').substring(0, 80),
+      status: entry.status,
+      api_response_code: entry.api_response_code || '',
+      ticket_id: entry.ticket_id || 0,
+      msg_id: entry.msg_id || ''
+    });
+  } catch (err) {
+    console.error('[kwtsms] Failed to write log entry:', err.message);
+  }
+}
+
+/**
+ * Increment stats counters after a send attempt.
+ * Non-fatal: catches errors silently.
+ */
+async function updateStats($db, success) {
+  try {
+    const { data: stats } = await $db.get(DS_KEYS.STATS);
+    const parsed = typeof stats === 'string' ? JSON.parse(stats) : stats;
+
+    if (success) {
+      parsed.total_sent++;
+      parsed.today_sent++;
+      parsed.month_sent++;
+    } else {
+      parsed.total_failed++;
+      parsed.today_failed++;
+      parsed.month_failed++;
+    }
+
+    await $db.set(DS_KEYS.STATS, { data: JSON.stringify(parsed) });
+  } catch (err) {
+    console.error('[kwtsms] Failed to update stats:', err.message);
+  }
+}
+
+/**
+ * Reset daily and monthly counters. Called by the scheduled cron handler.
+ */
+async function resetCounters($db) {
+  try {
+    const { data: stats } = await $db.get(DS_KEYS.STATS);
+    const parsed = typeof stats === 'string' ? JSON.parse(stats) : stats;
+    const today = new Date().toISOString().split('T')[0];
+    const month = today.substring(0, 7);
+
+    if (parsed.last_reset_date !== today) {
+      parsed.today_sent = 0;
+      parsed.today_failed = 0;
+      parsed.last_reset_date = today;
+    }
+
+    if (parsed.last_reset_month !== month) {
+      parsed.month_sent = 0;
+      parsed.month_failed = 0;
+      parsed.last_reset_month = month;
+    }
+
+    await $db.set(DS_KEYS.STATS, { data: JSON.stringify(parsed) });
+  } catch (err) {
+    console.error('[kwtsms] Failed to reset counters:', err.message);
+  }
+}
+
+/**
+ * Log a debug message (only if debug mode is enabled).
+ */
+function debugLog(message, debugEnabled) {
+  if (debugEnabled) {
+    console.log('[kwtsms:debug]', message);
+  }
+}
+
+/**
+ * Standard operational message (always logged).
+ */
+function log(message) {
+  console.log('[kwtsms]', message);
+}
+
+// ======================================================================
+// SMS SENDER
+// ======================================================================
+
+/**
+ * Send SMS through the full guard chain.
+ */
+async function send(params) {
+  const { $request, $db, credentials, phones, message, eventType, ticketId } = params;
+
+  // --- GUARD 1: Plugin enabled ---
+  let settings;
+  try {
+    const { data } = await $db.get(DS_KEYS.SETTINGS);
+    settings = typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (err) {
+    log('Settings not found, plugin may not be initialized');
+    return { success: false, message: 'Plugin not configured' };
+  }
+
+  if (!settings.enabled) {
+    debugLog('Send skipped: plugin disabled', settings.debug);
+    return { success: false, message: 'SMS gateway is disabled' };
+  }
+
+  // --- GUARD 2: Gateway configured (iparams exist if we got this far) ---
+
+  // --- GUARD 3: Balance > 0 ---
+  let gateway;
+  try {
+    const { data } = await $db.get(DS_KEYS.GATEWAY);
+    gateway = typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (err) {
+    log('Gateway data not found');
+    return { success: false, message: 'Gateway not configured' };
+  }
+
+  if (!gateway.balance || gateway.balance <= 0) {
+    log('Send skipped: zero balance');
+    return { success: false, message: 'Insufficient balance' };
+  }
+
+  // --- PREPARE MESSAGE ---
+  const cleanedMessage = cleanMessage(message);
+  if (!cleanedMessage) {
+    log('Send skipped: empty message after cleaning');
+    return { success: false, message: 'Message is empty after cleaning' };
+  }
+
+  // --- PREPARE RECIPIENTS ---
+  const normalized = phones.map(normalize).filter(validate);
+  const coverage = gateway.coverage || [];
+  const covered = normalized.filter((phone) => {
+    if (coverage.length === 0) return true;
+    const isCovered = coverage.some((c) => phone.startsWith(String(c)));
+    if (!isCovered) {
+      debugLog(`Phone ${phone.substring(0, 6)}*** skipped: country not in coverage`, settings.debug);
+    }
+    return isCovered;
+  });
+  const recipients = deduplicate(covered);
+
+  if (recipients.length === 0) {
+    log('Send skipped: no valid recipients after filtering');
+    return { success: false, message: 'No valid recipients' };
+  }
+
+  // --- SEND ---
+  const testFlag = settings.test_mode ? '1' : '0';
+  const sender = settings.active_sender_id || 'KWT-SMS';
+
+  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
+
+  let result;
+  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
+    result = await sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
+  } else {
+    result = await bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
+  }
+
+  // --- LOG & STATS ---
+  const success = result.result === 'OK';
+
+  // Update cached balance from send response
+  if (success && result['balance-after'] !== undefined) {
+    try {
+      gateway.balance = result['balance-after'];
+      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+    } catch (err) {
+      debugLog('Failed to update cached balance: ' + err.message, settings.debug);
+    }
+  }
+
+  // Log to Entity Store (non-fatal)
+  await logSmsResult($db, {
+    event_type: eventType,
+    recipient_phone: recipients.join(','),
+    message_preview: cleanedMessage,
+    status: success ? 'sent' : 'failed',
+    api_response_code: result.code || result.result || '',
+    ticket_id: ticketId || 0,
+    msg_id: result['msg-id'] || ''
+  });
+
+  // Update stats (non-fatal)
+  await updateStats($db, success);
+
+  if (success) {
+    log(`SMS sent: ${recipients.length} recipient(s), event=${eventType}, msg-id=${result['msg-id'] || 'n/a'}`);
+    return { success: true, message: 'Sent successfully' };
+  } else {
+    log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
+    return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
+  }
+}
+
+/**
+ * Send a single batch (up to 200 numbers).
+ */
+async function sendBatch($request, credentials, mobile, message, sender, test) {
+  try {
+    const response = await $request.invokeTemplate('sendSms', {
+      body: JSON.stringify({
+        ...credentials,
+        sender: sender,
+        mobile: mobile,
+        message: message,
+        test: test
+      })
+    });
+    return JSON.parse(response.response);
+  } catch (err) {
+    console.error('[kwtsms] API call failed:', err.message);
+    return { result: 'ERROR', code: 'NETWORK', description: err.message };
+  }
+}
+
+/**
+ * Send to >200 numbers by chunking with delays and ERR013 backoff.
+ */
+async function bulkSend($request, credentials, recipients, message, sender, test, debug) {
+  let lastResult = { result: 'ERROR', description: 'No batches sent' };
+
+  for (let i = 0; i < recipients.length; i += KWTSMS.MAX_BATCH_SIZE) {
+    const batch = recipients.slice(i, i + KWTSMS.MAX_BATCH_SIZE);
+
+    if (i > 0) {
+      await sleep(KWTSMS.BATCH_DELAY_MS);
+    }
+
+    let attempt = 0;
+    while (attempt <= KWTSMS.MAX_RETRIES) {
+      const result = await sendBatch($request, credentials, batch.join(','), message, sender, test);
+
+      if (result.code === 'ERR013' && attempt < KWTSMS.MAX_RETRIES) {
+        debugLog(`ERR013 queue full, backing off ${KWTSMS.ERR013_BACKOFF_MS[attempt]}ms`, debug);
+        await sleep(KWTSMS.ERR013_BACKOFF_MS[attempt]);
+        attempt++;
+      } else {
+        lastResult = result;
+        break;
+      }
+    }
+  }
+
+  return lastResult;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ======================================================================
+// HELPERS: Credentials, Settings, Templates, Admin Alerts, Company Name
+// ======================================================================
 
 async function getCredentials(args) {
   const iparams = await args.iparams.get('kwtsms_username', 'kwtsms_password');
   return { username: iparams.kwtsms_username, password: iparams.kwtsms_password };
 }
-
-// ──────────────────────────────────────────────
-// Helper: Load settings, templates, admin alerts
-// ──────────────────────────────────────────────
 
 async function loadSettings($db) {
   try {
@@ -57,9 +610,9 @@ async function getCompanyName(args) {
   } catch (e) { return ''; }
 }
 
-// ──────────────────────────────────────────────
-// Event: Ticket Created
-// ──────────────────────────────────────────────
+// ======================================================================
+// EVENT HANDLERS
+// ======================================================================
 
 async function onTicketCreateHandler(args) {
   const { data: payload } = args;
@@ -120,10 +673,6 @@ async function onTicketCreateHandler(args) {
   }
 }
 
-// ──────────────────────────────────────────────
-// Event: Ticket Updated
-// ──────────────────────────────────────────────
-
 async function onTicketUpdateHandler(args) {
   const { data: payload } = args;
   const $db = args.$db;
@@ -181,10 +730,6 @@ async function onTicketUpdateHandler(args) {
   }
 }
 
-// ──────────────────────────────────────────────
-// Event: Conversation Created (agent reply)
-// ──────────────────────────────────────────────
-
 async function onConversationCreateHandler(args) {
   const { data: payload } = args;
   const $db = args.$db;
@@ -217,10 +762,6 @@ async function onConversationCreateHandler(args) {
     });
   }
 }
-
-// ──────────────────────────────────────────────
-// Event: Scheduled (daily cron sync)
-// ──────────────────────────────────────────────
 
 async function onScheduledEventHandler(args) {
   const $db = args.$db;
@@ -266,10 +807,6 @@ async function onScheduledEventHandler(args) {
     console.error('[kwtsms] Daily sync failed:', err.message);
   }
 }
-
-// ──────────────────────────────────────────────
-// Event: App Installed
-// ──────────────────────────────────────────────
 
 async function onAppInstallHandler(args) {
   const $db = args.$db;
@@ -353,10 +890,6 @@ async function onAppInstallHandler(args) {
   return { status: 200 };
 }
 
-// ──────────────────────────────────────────────
-// Event: App Uninstalled
-// ──────────────────────────────────────────────
-
 async function onAppUninstallHandler(args) {
   const $db = args.$db;
   const $schedule = args.$schedule;
@@ -378,9 +911,9 @@ async function onAppUninstallHandler(args) {
   return { status: 200 };
 }
 
-// ──────────────────────────────────────────────
+// ======================================================================
 // SMI: Manual Send SMS (called from ticket sidebar)
-// ──────────────────────────────────────────────
+// ======================================================================
 
 async function manualSendSms(args) {
   const smiData = args.data || {};
@@ -407,16 +940,16 @@ async function manualSendSms(args) {
   });
 }
 
-// ──────────────────────────────────────────────
-// Exports (FDK pattern: exports = {})
-// ──────────────────────────────────────────────
+// ======================================================================
+// EXPORTS (FDK serverless pattern)
+// ======================================================================
 
 exports = {
-  onTicketCreateHandler: onTicketCreateHandler,
-  onTicketUpdateHandler: onTicketUpdateHandler,
-  onConversationCreateHandler: onConversationCreateHandler,
-  onScheduledEventHandler: onScheduledEventHandler,
-  onAppInstallHandler: onAppInstallHandler,
-  onAppUninstallHandler: onAppUninstallHandler,
-  manualSendSms: manualSendSms
+  onTicketCreateHandler,
+  onTicketUpdateHandler,
+  onConversationCreateHandler,
+  onScheduledEventHandler,
+  onAppInstallHandler,
+  onAppUninstallHandler,
+  manualSendSms
 };
