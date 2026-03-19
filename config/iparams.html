@@ -142,7 +142,7 @@
 
     <div class="form-group">
       <button type="button" id="btn-test" class="btn btn-primary" onclick="testConnection()">
-        Test Connection
+        Login
       </button>
       <span id="connection-status" class="status-badge hidden"></span>
     </div>
@@ -219,7 +219,7 @@
 
       let btnTest = document.getElementById('btn-test');
       btnTest.disabled = true;
-      btnTest.textContent = 'Testing...';
+      btnTest.textContent = 'Logging in...';
       showStatus('loading', 'Connecting to kwtSMS...');
 
       // Call balance endpoint directly (cannot use invokeTemplate before iparams are saved)
@@ -253,7 +253,7 @@
         })
         .finally(function() {
           btnTest.disabled = false;
-          btnTest.textContent = 'Test Connection';
+          btnTest.textContent = 'Login';
         });
     }
 
