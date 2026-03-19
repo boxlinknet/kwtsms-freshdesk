@@ -133,9 +133,9 @@
 
   function populateTemplates() {
     if (!state.templates) return;
-    let select = document.getElementById('template-select');
+    const select = document.getElementById('template-select');
     // Add quick templates (subset useful for agents)
-    let quickTemplates = [
+    const quickTemplates = [
       { key: 'ticket_created', label: 'Ticket created notification' },
       { key: 'status_changed', label: 'Status update' },
       { key: 'agent_reply', label: 'Agent reply notification' }
@@ -165,12 +165,12 @@
 
   // Template selection handler (called from onchange)
   window.selectTemplate = function() {
-    let select = document.getElementById('template-select');
-    let key = select.value;
+    const select = document.getElementById('template-select');
+    const key = select.value;
     if (!key || !state.templates || !state.templates[key]) return;
 
-    let template = state.templates[key][state.currentLang] || state.templates[key]['en'] || '';
-    let resolved = resolvePlaceholders(template);
+    const template = state.templates[key][state.currentLang] || state.templates[key]['en'] || '';
+    const resolved = resolvePlaceholders(template);
 
     document.getElementById('sms-message').value = resolved;
     updateCharCount();
@@ -180,10 +180,10 @@
   window.setLang = function(lang) {
     state.currentLang = lang;
     updateLangButtons();
-    let textarea = document.getElementById('sms-message');
+    const textarea = document.getElementById('sms-message');
     textarea.dir = lang === 'ar' ? 'rtl' : 'ltr';
     // Re-apply template if one was selected
-    let select = document.getElementById('template-select');
+    const select = document.getElementById('template-select');
     if (select.value) {
       window.selectTemplate();
     }
@@ -195,7 +195,7 @@
   }
 
   /** GSM-7 basic charset + extended charset as a string for lookup */
-  let GSM7_ALL = '@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e'
+  const GSM7_ALL = '@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e'
     + ' \u00c6\u00e6\u00df\u00c9!"#\u00a4%&\'()*+,-./0123456789:;<=>?'
     + '\u00a1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00c4\u00d6\u00d1\u00dc\u00a7\u00bfabcdefghijklmnopqrstuvwxyz\u00e4\u00f6\u00f1\u00fc\u00e0'
     + '\f^{}[]~|\\' + '\u20ac';
@@ -209,7 +209,7 @@
 
   function updateCharCount() {
     const text = document.getElementById('sms-message').value;
-    let isUnicode = !isGsm7Text(text);
+    const isUnicode = !isGsm7Text(text);
 
     const chars = text.length;
     let parts;
@@ -227,7 +227,7 @@
 
   // Send SMS (called from onclick)
   window.sendSms = function() {
-    let message = document.getElementById('sms-message').value.trim();
+    const message = document.getElementById('sms-message').value.trim();
     if (!message) {
       showToast('Please enter a message', 'error');
       return;
@@ -237,7 +237,7 @@
       return;
     }
 
-    let btn = document.getElementById('btn-send');
+    const btn = document.getElementById('btn-send');
     btn.disabled = true;
     btn.textContent = 'Sending...';
 
@@ -248,7 +248,7 @@
         ticket_id: state.ticketId
       }
     }).then(function(data) {
-      let result = typeof data.response === 'string' ? JSON.parse(data.response) : data.response;
+      const result = typeof data.response === 'string' ? JSON.parse(data.response) : data.response;
       if (result.success) {
         showToast('SMS sent successfully', 'success');
         document.getElementById('sms-message').value = '';
@@ -269,7 +269,7 @@
     if (!state.contactPhone) return;
 
     // Normalize phone for Entity Store query
-    let normalizedPhone = state.contactPhone.replace(/\D/g, '').replace(/^0+/, '');
+    const normalizedPhone = state.contactPhone.replace(/\D/g, '').replace(/^0+/, '');
 
     state.client.db.entity.getAll('sms_log', {
       filter: { recipient_phone: normalizedPhone },
