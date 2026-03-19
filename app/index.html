@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kwtSMS for Freshdesk</title>
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-logo">
+        <span class="logo-icon">&#9993;</span>
+        <h1 class="app-title">kwtSMS</h1>
+      </div>
+      <div class="header-actions">
+        <button id="btn-lang-toggle" class="btn btn-ghost btn-sm" title="Toggle Language Direction">
+          <span id="lang-toggle-label">AR</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
+      <button class="tab-btn" data-tab="settings" role="tab" aria-selected="false">Settings</button>
+      <button class="tab-btn" data-tab="templates" role="tab" aria-selected="false">Templates</button>
+      <button class="tab-btn" data-tab="logs" role="tab" aria-selected="false">Logs</button>
+      <button class="tab-btn" data-tab="admin-alerts" role="tab" aria-selected="false">Admin Alerts</button>
+      <button class="tab-btn" data-tab="help" role="tab" aria-selected="false">Help</button>
+    </nav>
+
+    <!-- Tab Panels -->
+    <main class="tab-content">
+
+      <!-- ==================== DASHBOARD ==================== -->
+      <section id="tab-dashboard" class="tab-panel active" role="tabpanel">
+        <!-- Stat Cards -->
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-label">Balance</div>
+            <div class="stat-value" id="stat-balance">--</div>
+            <div class="stat-unit">credits</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Sent Today</div>
+            <div class="stat-value" id="stat-today">0</div>
+            <div class="stat-unit">messages</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">This Month</div>
+            <div class="stat-value" id="stat-month">0</div>
+            <div class="stat-unit">messages</div>
+          </div>
+          <div class="stat-card stat-card-error">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value" id="stat-failed">0</div>
+            <div class="stat-unit">this month</div>
+          </div>
+        </div>
+
+        <!-- Gateway Status -->
+        <div class="section-block">
+          <h2 class="section-title">Gateway Status</h2>
+          <div class="status-grid">
+            <div class="status-item">
+              <span class="status-dot" id="gw-connected-dot"></span>
+              <span class="status-text" id="gw-connected-text">Disconnected</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot" id="gw-enabled-dot"></span>
+              <span class="status-text" id="gw-enabled-text">Disabled</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot" id="gw-testmode-dot"></span>
+              <span class="status-text" id="gw-testmode-text">Test Mode: OFF</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot status-dot-info"></span>
+              <span class="status-text">Sender ID: <strong id="gw-sender-id">--</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="section-block">
+          <h2 class="section-title">Recent Activity</h2>
+          <div class="table-wrap">
+            <table class="data-table" id="recent-activity-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Event</th>
+                  <th>Recipient</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recent-activity-body">
+                <tr class="empty-row">
+                  <td colspan="5">No recent activity</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SETTINGS ==================== -->
+      <section id="tab-settings" class="tab-panel" role="tabpanel">
+        <!-- General Settings -->
+        <div class="section-block">
+          <h2 class="section-title">General Settings</h2>
+          <div class="settings-list">
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Enable SMS Gateway</span>
+                <span class="setting-desc">Turn on to allow the app to send SMS notifications</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-enabled">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Test Mode</span>
+                <span class="setting-desc">When enabled, SMS will be logged but not actually sent</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-test-mode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Debug Logging</span>
+                <span class="setting-desc">Enable verbose logging for troubleshooting</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-debug">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Default Language</span>
+                <span class="setting-desc">Language used for SMS templates</span>
+              </div>
+              <select id="setting-language" class="form-select">
+                <option value="en">English</option>
+                <option value="ar">Arabic</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Active Sender ID</span>
+                <span class="setting-desc">Sender name shown on recipient's phone</span>
+              </div>
+              <select id="setting-sender-id" class="form-select">
+                <option value="KWT-SMS">KWT-SMS</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gateway Info (read-only) -->
+        <div class="section-block">
+          <h2 class="section-title">Gateway Info</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Status</span>
+              <span class="info-value" id="info-gw-status">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Username</span>
+              <span class="info-value" id="info-gw-username">****</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Balance</span>
+              <span class="info-value" id="info-gw-balance">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Sender IDs</span>
+              <span class="info-value" id="info-gw-senders">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Coverage</span>
+              <span class="info-value" id="info-gw-coverage">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Last Sync</span>
+              <span class="info-value" id="info-gw-last-sync">--</span>
+            </div>
+          </div>
+          <p class="info-note">Credentials are configured during app installation.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="section-block">
+          <div class="button-row">
+            <button class="btn btn-secondary" id="btn-sync-now">Sync Now</button>
+            <button class="btn btn-primary" id="btn-send-test">Send Test SMS</button>
+          </div>
+        </div>
+
+        <!-- Test SMS Modal -->
+        <div class="modal-overlay" id="modal-test-sms">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 class="modal-title">Send Test SMS</h3>
+              <button class="modal-close" id="modal-test-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label class="form-label" for="test-phone">Phone Number</label>
+                <input type="tel" id="test-phone" class="form-input" placeholder="+965XXXXXXXX">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="test-message">Message</label>
+                <textarea id="test-message" class="form-textarea" rows="3" placeholder="Test message from kwtSMS"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-ghost" id="modal-test-cancel">Cancel</button>
+              <button class="btn btn-primary" id="modal-test-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TEMPLATES ==================== -->
+      <section id="tab-templates" class="tab-panel" role="tabpanel">
+        <!-- Event Type Pills -->
+        <div class="pill-nav" id="template-pills">
+          <button class="pill-btn active" data-event="ticket_created">Ticket Created</button>
+          <button class="pill-btn" data-event="status_changed">Status Changed</button>
+          <button class="pill-btn" data-event="agent_reply">Agent Reply</button>
+          <button class="pill-btn" data-event="admin_new_ticket">New Ticket (Admin)</button>
+          <button class="pill-btn" data-event="admin_high_priority">High Priority (Admin)</button>
+          <button class="pill-btn" data-event="admin_escalation">Escalation (Admin)</button>
+        </div>
+
+        <!-- Template Editor -->
+        <div class="template-editor">
+          <div class="template-col">
+            <div class="template-header">
+              <span class="template-lang-label">English</span>
+              <span class="char-counter" id="counter-en">0 chars / 1 SMS</span>
+            </div>
+            <textarea id="template-en" class="form-textarea template-textarea" rows="5" dir="ltr"></textarea>
+          </div>
+          <div class="template-col">
+            <div class="template-header">
+              <span class="template-lang-label">Arabic</span>
+              <span class="char-counter" id="counter-ar">0 chars / 1 SMS</span>
+            </div>
+            <textarea id="template-ar" class="form-textarea template-textarea" rows="5" dir="rtl"></textarea>
+          </div>
+        </div>
+
+        <!-- Placeholders -->
+        <div class="section-block">
+          <h3 class="section-subtitle">Available Placeholders</h3>
+          <div class="placeholder-chips" id="placeholder-chips">
+            <span class="chip" data-placeholder="{{ticket_id}}">ticket_id</span>
+            <span class="chip" data-placeholder="{{ticket_subject}}">ticket_subject</span>
+            <span class="chip" data-placeholder="{{ticket_status}}">ticket_status</span>
+            <span class="chip" data-placeholder="{{ticket_priority}}">ticket_priority</span>
+            <span class="chip" data-placeholder="{{requester_name}}">requester_name</span>
+            <span class="chip" data-placeholder="{{requester_email}}">requester_email</span>
+            <span class="chip" data-placeholder="{{agent_name}}">agent_name</span>
+            <span class="chip" data-placeholder="{{company_name}}">company_name</span>
+          </div>
+        </div>
+
+        <!-- Template Actions -->
+        <div class="section-block">
+          <div class="button-row">
+            <button class="btn btn-ghost" id="btn-template-reset">Reset to Default</button>
+            <button class="btn btn-primary" id="btn-template-save">Save Templates</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== LOGS ==================== -->
+      <section id="tab-logs" class="tab-panel" role="tabpanel">
+        <!-- Filters -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label class="form-label" for="log-filter-event">Event Type</label>
+            <select id="log-filter-event" class="form-select">
+              <option value="">All Events</option>
+              <option value="ticket_created">Ticket Created</option>
+              <option value="status_changed">Status Changed</option>
+              <option value="agent_reply">Agent Reply</option>
+              <option value="admin_new_ticket">New Ticket (Admin)</option>
+              <option value="admin_high_priority">High Priority (Admin)</option>
+              <option value="admin_escalation">Escalation (Admin)</option>
+              <option value="manual_send">Manual Send</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="form-label" for="log-filter-status">Status</label>
+            <select id="log-filter-status" class="form-select">
+              <option value="">All Status</option>
+              <option value="sent">Sent</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-log-filter">Filter</button>
+            <button class="btn btn-danger btn-sm" id="btn-log-clear">Clear Logs</button>
+          </div>
+        </div>
+
+        <!-- Log Table -->
+        <div class="table-wrap">
+          <table class="data-table" id="log-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Recipient</th>
+                <th>Message</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="log-table-body">
+              <tr class="empty-row">
+                <td colspan="5">No SMS logs yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="log-pagination">
+          <button class="btn btn-ghost btn-sm" id="btn-log-prev" disabled>Previous</button>
+          <span class="pagination-info" id="log-page-info">Page 1</span>
+          <button class="btn btn-ghost btn-sm" id="btn-log-next" disabled>Next</button>
+        </div>
+
+        <!-- Clear Logs Confirmation Modal -->
+        <div class="modal-overlay" id="modal-clear-logs">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 class="modal-title">Clear All Logs</h3>
+              <button class="modal-close" id="modal-clear-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p>Are you sure you want to clear all SMS logs? This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-ghost" id="modal-clear-cancel">Cancel</button>
+              <button class="btn btn-danger" id="modal-clear-confirm">Clear All</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== ADMIN ALERTS ==================== -->
+      <section id="tab-admin-alerts" class="tab-panel" role="tabpanel">
+        <!-- Recipients -->
+        <div class="section-block">
+          <h2 class="section-title">Alert Recipients</h2>
+          <div class="phone-input-row">
+            <input type="tel" id="alert-phone-input" class="form-input" placeholder="+965XXXXXXXX">
+            <button class="btn btn-primary btn-sm" id="btn-alert-add">Add</button>
+          </div>
+          <ul class="phone-list" id="alert-phone-list">
+            <!-- Phone items rendered by JS -->
+          </ul>
+          <p class="empty-message" id="alert-phones-empty">No alert recipients configured</p>
+        </div>
+
+        <!-- Alert Events -->
+        <div class="section-block">
+          <h2 class="section-title">Alert Events</h2>
+          <div class="settings-list">
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">New ticket created</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="alert-new-ticket" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">High/Urgent priority ticket</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="alert-high-priority" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Priority escalation</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="alert-escalation" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save -->
+        <div class="section-block">
+          <div class="button-row">
+            <button class="btn btn-primary" id="btn-alert-save">Save Alerts</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== HELP ==================== -->
+      <section id="tab-help" class="tab-panel" role="tabpanel">
+        <!-- Setup Steps -->
+        <div class="section-block">
+          <h2 class="section-title">Getting Started</h2>
+          <div class="step-cards">
+            <div class="step-card">
+              <div class="step-number">1</div>
+              <h3 class="step-title">Sign Up</h3>
+              <p class="step-desc">Create a kwtSMS account at kwtsms.com</p>
+            </div>
+            <div class="step-card">
+              <div class="step-number">2</div>
+              <h3 class="step-title">Configure</h3>
+              <p class="step-desc">Enter your API credentials during app installation</p>
+            </div>
+            <div class="step-card">
+              <div class="step-number">3</div>
+              <h3 class="step-title">Test</h3>
+              <p class="step-desc">Enable test mode and send a test SMS</p>
+            </div>
+            <div class="step-card">
+              <div class="step-number">4</div>
+              <h3 class="step-title">Go Live</h3>
+              <p class="step-desc">Disable test mode to start sending real SMS</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Support Links -->
+        <div class="section-block">
+          <h2 class="section-title">Support and Resources</h2>
+          <div class="help-links">
+            <a href="https://www.kwtsms.com" target="_blank" rel="noopener noreferrer" class="help-link">
+              <span class="help-link-icon">&#127760;</span>
+              <span class="help-link-text">kwtSMS Website</span>
+            </a>
+            <a href="https://www.kwtsms.com/developers" target="_blank" rel="noopener noreferrer" class="help-link">
+              <span class="help-link-icon">&#128196;</span>
+              <span class="help-link-text">API Documentation</span>
+            </a>
+            <a href="https://www.kwtsms.com/contact" target="_blank" rel="noopener noreferrer" class="help-link">
+              <span class="help-link-icon">&#9993;</span>
+              <span class="help-link-text">Contact Support</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toast-container"></div>
+
+  </div>
+
+  <script src="https://static.freshdev.io/fdk/2.0/assets/fresh_client.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
