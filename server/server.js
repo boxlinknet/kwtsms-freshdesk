@@ -231,11 +231,22 @@ function cleanMessage(message) {
 }
 
 /**
+ * GSM-7 basic charset + extended charset as a string for indexOf lookup.
+ * Avoids regex with unnecessary escapes that trigger linter warnings.
+ */
+const GSM7_ALL = '@\u00A3$\u00A5\u00E8\u00E9\u00F9\u00EC\u00F2\u00C7\n\u00D8\u00F8\r\u00C5\u00E5\u0394_\u03A6\u0393\u039B\u03A9\u03A0\u03A8\u03A3\u0398\u039E'
+  + ' \u00C6\u00E6\u00DF\u00C9!"#\u00A4%&\'()*+,-./0123456789:;<=>?'
+  + '\u00A1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00C4\u00D6\u00D1\u00DC\u00A7\u00BFabcdefghijklmnopqrstuvwxyz\u00E4\u00F6\u00F1\u00FC\u00E0'
+  + '\f^{}[]~|\\' + '\u20AC';
+
+/**
  * Detect if text contains non-GSM7 characters (requires Unicode encoding).
  */
 function isUnicode(text) {
-  const gsm7 = /^[@\u00A3\u0024\u00A5\u00E8\u00E9\u00F9\u00EC\u00F2\u00C7\n\u00D8\u00F8\r\u00C5\u00E5\u0394_\u03A6\u0393\u039B\u03A9\u03A0\u03A8\u03A3\u0398\u039E \u00C6\u00E6\u00DF\u00C9!"#\u00A4%&'()*+,\-.\/0-9:;<=>?\u00A1A-Z\u00C4\u00D6\u00D1\u00DCa-z\u00E4\u00F6\u00F1\u00FC\u00E0\u000C^{}\[~\]|\u20AC]*$/;
-  return !gsm7.test(text);
+  for (let i = 0; i < text.length; i++) {
+    if (GSM7_ALL.indexOf(text[i]) === -1) return true;
+  }
+  return false;
 }
 
 /**
@@ -287,19 +298,31 @@ function resolveTemplate(templates, eventType, language, data) {
 }
 
 /**
+ * Resolve a status code to a localized label.
+ */
+function resolveStatusLabel(statusCode, language) {
+  return (STATUS_LABELS[language] || STATUS_LABELS.en)[statusCode] || '';
+}
+
+/**
+ * Resolve a priority code to a localized label.
+ */
+function resolvePriorityLabel(priorityCode, language) {
+  return (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[priorityCode] || '';
+}
+
+/**
  * Build placeholder data object from a Freshdesk event payload.
  */
 function buildPlaceholderData(payload, companyName, language) {
   const ticket = payload.data?.ticket || {};
   const requester = payload.data?.requester || {};
-  const statusCode = ticket.status;
-  const priorityCode = ticket.priority;
 
   return {
     ticket_id: ticket.id || '',
     ticket_subject: ticket.subject || '',
-    ticket_status: (STATUS_LABELS[language] || STATUS_LABELS.en)[statusCode] || '',
-    ticket_priority: (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[priorityCode] || '',
+    ticket_status: resolveStatusLabel(ticket.status, language),
+    ticket_priority: resolvePriorityLabel(ticket.priority, language),
     requester_name: requester.name || '',
     requester_phone: requester.phone || '',
     requester_email: requester.email || '',
@@ -408,85 +431,65 @@ function log(message) {
 // ======================================================================
 
 /**
- * Send SMS through the full guard chain.
+ * Guard: check plugin is enabled and return settings, or return an error result.
  */
-async function send(params) {
-  const { $request, $db, credentials, phones, message, eventType, ticketId } = params;
-
-  // --- GUARD 1: Plugin enabled ---
+async function guardSettings($db) {
   let settings;
   try {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
     settings = typeof data === 'string' ? JSON.parse(data) : data;
   } catch (err) {
     log('Settings not found, plugin may not be initialized');
-    return { success: false, message: 'Plugin not configured' };
+    return { error: { success: false, message: 'Plugin not configured' } };
   }
-
   if (!settings.enabled) {
     debugLog('Send skipped: plugin disabled', settings.debug);
-    return { success: false, message: 'SMS gateway is disabled' };
+    return { error: { success: false, message: 'SMS gateway is disabled' } };
   }
+  return { settings };
+}
 
-  // --- GUARD 2: Gateway configured (iparams exist if we got this far) ---
-
-  // --- GUARD 3: Balance > 0 ---
+/**
+ * Guard: check gateway exists and has positive balance, or return an error result.
+ */
+async function guardGateway($db) {
   let gateway;
   try {
     const { data } = await $db.get(DS_KEYS.GATEWAY);
     gateway = typeof data === 'string' ? JSON.parse(data) : data;
   } catch (err) {
     log('Gateway data not found');
-    return { success: false, message: 'Gateway not configured' };
+    return { error: { success: false, message: 'Gateway not configured' } };
   }
-
   if (!gateway.balance || gateway.balance <= 0) {
     log('Send skipped: zero balance');
-    return { success: false, message: 'Insufficient balance' };
+    return { error: { success: false, message: 'Insufficient balance' } };
   }
+  return { gateway };
+}
 
-  // --- PREPARE MESSAGE ---
-  const cleanedMessage = cleanMessage(message);
-  if (!cleanedMessage) {
-    log('Send skipped: empty message after cleaning');
-    return { success: false, message: 'Message is empty after cleaning' };
-  }
-
-  // --- PREPARE RECIPIENTS ---
+/**
+ * Prepare recipients: normalize, validate, filter by coverage, deduplicate.
+ */
+function prepareRecipients(phones, coverage, debug) {
   const normalized = phones.map(normalize).filter(validate);
-  const coverage = gateway.coverage || [];
   const covered = normalized.filter((phone) => {
     if (coverage.length === 0) return true;
     const isCovered = coverage.some((c) => phone.startsWith(String(c)));
     if (!isCovered) {
-      debugLog(`Phone ${phone.substring(0, 6)}*** skipped: country not in coverage`, settings.debug);
+      debugLog(`Phone ${phone.substring(0, 6)}*** skipped: country not in coverage`, debug);
     }
     return isCovered;
   });
-  const recipients = deduplicate(covered);
+  return deduplicate(covered);
+}
 
-  if (recipients.length === 0) {
-    log('Send skipped: no valid recipients after filtering');
-    return { success: false, message: 'No valid recipients' };
-  }
-
-  // --- SEND ---
-  const testFlag = settings.test_mode ? '1' : '0';
-  const sender = settings.active_sender_id || 'KWT-SMS';
-
-  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
-
-  let result;
-  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
-    result = await sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
-  } else {
-    result = await bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
-  }
-
-  // --- LOG & STATS ---
+/**
+ * Handle post-send: update balance cache, log result, update stats.
+ */
+async function handleSendResult($db, result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
   const success = result.result === 'OK';
 
-  // Update cached balance from send response
   if (success && result['balance-after'] !== undefined) {
     try {
       gateway.balance = result['balance-after'];
@@ -496,7 +499,6 @@ async function send(params) {
     }
   }
 
-  // Log to Entity Store (non-fatal)
   await logSmsResult($db, {
     event_type: eventType,
     recipient_phone: recipients.join(','),
@@ -507,16 +509,54 @@ async function send(params) {
     msg_id: result['msg-id'] || ''
   });
 
-  // Update stats (non-fatal)
   await updateStats($db, success);
 
   if (success) {
     log(`SMS sent: ${recipients.length} recipient(s), event=${eventType}, msg-id=${result['msg-id'] || 'n/a'}`);
     return { success: true, message: 'Sent successfully' };
-  } else {
-    log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
-    return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
   }
+  log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
+  return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
+}
+
+/**
+ * Send SMS through the full guard chain.
+ */
+async function send(params) {
+  const { $request, $db, credentials, phones, message, eventType, ticketId } = params;
+
+  const settingsGuard = await guardSettings($db);
+  if (settingsGuard.error) return settingsGuard.error;
+  const settings = settingsGuard.settings;
+
+  const gatewayGuard = await guardGateway($db);
+  if (gatewayGuard.error) return gatewayGuard.error;
+  const gateway = gatewayGuard.gateway;
+
+  const cleanedMessage = cleanMessage(message);
+  if (!cleanedMessage) {
+    log('Send skipped: empty message after cleaning');
+    return { success: false, message: 'Message is empty after cleaning' };
+  }
+
+  const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
+  if (recipients.length === 0) {
+    log('Send skipped: no valid recipients after filtering');
+    return { success: false, message: 'No valid recipients' };
+  }
+
+  const testFlag = settings.test_mode ? '1' : '0';
+  const sender = settings.active_sender_id || 'KWT-SMS';
+  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
+
+  let result;
+  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
+    result = await sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
+  } else {
+    result = await bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
+  }
+
+  return handleSendResult($db, result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
 }
 
 /**
@@ -613,6 +653,59 @@ async function getCompanyName(args) {
 }
 
 // ======================================================================
+// HANDLER HELPERS (reduce cyclomatic complexity of exports)
+// ======================================================================
+
+async function sendCustomerTicketCreated(ctx, payload, templates, settings, placeholders, ticketId) {
+  const customerPhone = payload.requester?.phone;
+  if (!customerPhone) return;
+  const message = resolveTemplate(templates, SMS_EVENT.TICKET_CREATED, settings.language, placeholders);
+  if (!message) return;
+  await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.TICKET_CREATED, ticketId });
+}
+
+async function sendAdminNewTicket(ctx, $db, templates, settings, placeholders, ticketId) {
+  const adminAlerts = await loadAdminAlerts($db);
+  if (adminAlerts.phones.length === 0 || !adminAlerts.events.new_ticket) return;
+  const adminMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_NEW_TICKET, settings.language, placeholders);
+  if (!adminMsg) return;
+  await send({ ...ctx, phones: adminAlerts.phones, message: adminMsg, eventType: SMS_EVENT.ADMIN_NEW_TICKET, ticketId });
+}
+
+async function sendAdminHighPriority(ctx, $db, payload, templates, settings, placeholders, ticketId) {
+  const priority = payload.ticket?.priority;
+  if (!priority || priority < TICKET_PRIORITY.HIGH) return;
+  const adminAlerts = await loadAdminAlerts($db);
+  if (adminAlerts.phones.length === 0 || !adminAlerts.events.high_priority) return;
+  const highMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_HIGH_PRIORITY, settings.language, placeholders);
+  if (!highMsg) return;
+  await send({ ...ctx, phones: adminAlerts.phones, message: highMsg, eventType: SMS_EVENT.ADMIN_HIGH_PRIORITY, ticketId });
+}
+
+async function sendStatusChanged(ctx, payload, changes, templates, settings, placeholders, ticketId) {
+  if (!changes.status) return;
+  const newStatus = Array.isArray(changes.status) ? changes.status[1] : changes.status;
+  if (newStatus !== TICKET_STATUS.RESOLVED && newStatus !== TICKET_STATUS.CLOSED) return;
+  const customerPhone = payload.requester?.phone;
+  if (!customerPhone) return;
+  const message = resolveTemplate(templates, SMS_EVENT.STATUS_CHANGED, settings.language, placeholders);
+  if (!message) return;
+  await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.STATUS_CHANGED, ticketId });
+}
+
+async function sendEscalationAlert(ctx, $db, changes, templates, settings, placeholders, ticketId) {
+  if (!changes.priority) return;
+  const oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
+  const newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
+  if (!oldPriority || oldPriority > TICKET_PRIORITY.MEDIUM || newPriority < TICKET_PRIORITY.HIGH) return;
+  const adminAlerts = await loadAdminAlerts($db);
+  if (adminAlerts.phones.length === 0 || !adminAlerts.events.escalation) return;
+  const escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
+  if (!escalMsg) return;
+  await send({ ...ctx, phones: adminAlerts.phones, message: escalMsg, eventType: SMS_EVENT.ADMIN_ESCALATION, ticketId });
+}
+
+// ======================================================================
 // EXPORTS (FDK serverless pattern - inline function syntax)
 // ======================================================================
 
@@ -629,51 +722,12 @@ exports = {
     const templates = await loadTemplates($db);
     const companyName = await getCompanyName(args);
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
+    const ticketIdVal = payload.ticket?.id;
+    const sendCtx = { $request, $db, credentials };
 
-    // Customer SMS
-    const customerPhone = payload.requester?.phone;
-    if (customerPhone) {
-      const message = resolveTemplate(templates, SMS_EVENT.TICKET_CREATED, settings.language, placeholders);
-      if (message) {
-        await send({
-          $request, $db, credentials,
-          phones: [customerPhone],
-          message,
-          eventType: SMS_EVENT.TICKET_CREATED,
-          ticketId: payload.ticket?.id
-        });
-      }
-    }
-
-    // Admin SMS
-    const adminAlerts = await loadAdminAlerts($db);
-    if (adminAlerts.phones.length > 0 && adminAlerts.events.new_ticket) {
-      const adminMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_NEW_TICKET, settings.language, placeholders);
-      if (adminMsg) {
-        await send({
-          $request, $db, credentials,
-          phones: adminAlerts.phones,
-          message: adminMsg,
-          eventType: SMS_EVENT.ADMIN_NEW_TICKET,
-          ticketId: payload.ticket?.id
-        });
-      }
-    }
-
-    // High priority admin alert (ticket CREATED at high priority, distinct from escalation)
-    const priority = payload.ticket?.priority;
-    if (priority >= TICKET_PRIORITY.HIGH && adminAlerts.phones.length > 0 && adminAlerts.events.high_priority) {
-      const highMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_HIGH_PRIORITY, settings.language, placeholders);
-      if (highMsg) {
-        await send({
-          $request, $db, credentials,
-          phones: adminAlerts.phones,
-          message: highMsg,
-          eventType: SMS_EVENT.ADMIN_HIGH_PRIORITY,
-          ticketId: payload.ticket?.id
-        });
-      }
-    }
+    await sendCustomerTicketCreated(sendCtx, payload, templates, settings, placeholders, ticketIdVal);
+    await sendAdminNewTicket(sendCtx, $db, templates, settings, placeholders, ticketIdVal);
+    await sendAdminHighPriority(sendCtx, $db, payload, templates, settings, placeholders, ticketIdVal);
   },
 
   onTicketUpdateHandler: async function(args) {
@@ -689,60 +743,22 @@ exports = {
     const templates = await loadTemplates($db);
     const companyName = await getCompanyName(args);
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
+    const ticketIdVal = payload.ticket?.id;
+    const sendCtx = { $request, $db, credentials };
 
-    // Case 1: Status changed to Resolved or Closed
-    if (changes.status) {
-      const newStatus = Array.isArray(changes.status) ? changes.status[1] : changes.status;
-      if (newStatus === TICKET_STATUS.RESOLVED || newStatus === TICKET_STATUS.CLOSED) {
-        const customerPhone = payload.requester?.phone;
-        if (customerPhone) {
-          const message = resolveTemplate(templates, SMS_EVENT.STATUS_CHANGED, settings.language, placeholders);
-          if (message) {
-            await send({
-              $request, $db, credentials,
-              phones: [customerPhone],
-              message,
-              eventType: SMS_EVENT.STATUS_CHANGED,
-              ticketId: payload.ticket?.id
-            });
-          }
-        }
-      }
-    }
-
-    // Case 2: Priority escalation (Low/Medium -> High/Urgent)
-    if (changes.priority) {
-      const oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
-      const newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
-
-      if (oldPriority && oldPriority <= TICKET_PRIORITY.MEDIUM && newPriority >= TICKET_PRIORITY.HIGH) {
-        const adminAlerts = await loadAdminAlerts($db);
-        if (adminAlerts.phones.length > 0 && adminAlerts.events.escalation) {
-          const escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
-          if (escalMsg) {
-            await send({
-              $request, $db, credentials,
-              phones: adminAlerts.phones,
-              message: escalMsg,
-              eventType: SMS_EVENT.ADMIN_ESCALATION,
-              ticketId: payload.ticket?.id
-            });
-          }
-        }
-      }
-    }
+    await sendStatusChanged(sendCtx, payload, changes, templates, settings, placeholders, ticketIdVal);
+    await sendEscalationAlert(sendCtx, $db, changes, templates, settings, placeholders, ticketIdVal);
   },
 
   onConversationCreateHandler: async function(args) {
     const { data: payload } = args;
-    const $db = args.$db;
-    const $request = args.$request;
     const conversation = payload.conversation || {};
 
     // Only send on public agent replies (not private notes, not customer messages, not forwards)
     if (conversation.incoming !== false) return;
     if (conversation.private !== false) return;
 
+    const $db = args.$db;
     const settings = await loadSettings($db);
     if (!settings || !settings.enabled) return;
 
@@ -753,17 +769,16 @@ exports = {
     const templates = await loadTemplates($db);
     const companyName = await getCompanyName(args);
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
-
     const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
-    if (message) {
-      await send({
-        $request, $db, credentials,
-        phones: [customerPhone],
-        message,
-        eventType: SMS_EVENT.AGENT_REPLY,
-        ticketId: payload.ticket?.id
-      });
-    }
+    if (!message) return;
+
+    await send({
+      $request: args.$request, $db, credentials,
+      phones: [customerPhone],
+      message,
+      eventType: SMS_EVENT.AGENT_REPLY,
+      ticketId: payload.ticket?.id
+    });
   },
 
   onScheduledEventHandler: async function(args) {

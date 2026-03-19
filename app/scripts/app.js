@@ -60,29 +60,26 @@
   // Application State
   // ──────────────────────────────────────────────
 
-  /** @type {Object|null} Freshworks client instance */
-  let client = null;
-
-  /** @type {Object} Current loaded settings */
-  let currentSettings = null;
-
-  /** @type {Object} Current loaded templates */
-  let currentTemplates = {};
-
-  /** @type {Object} Current loaded admin alerts */
-  let currentAdminAlerts = null;
-
-  /** @type {string} Currently selected template event */
-  let activeTemplateEvent = 'ticket_created';
-
-  /** @type {number} Current log page */
-  let logPage = 1;
-
   /** @type {number} Logs per page */
   const LOG_PAGE_SIZE = 20;
 
-  /** @type {boolean} Whether we are in RTL mode */
-  let isRTL = false;
+  /** @type {Object} Mutable application state (const object avoids FDK scope warnings) */
+  const state = {
+    /** @type {Object|null} Freshworks client instance */
+    client: null,
+    /** @type {Object} Current loaded settings */
+    currentSettings: null,
+    /** @type {Object} Current loaded templates */
+    currentTemplates: {},
+    /** @type {Object} Current loaded admin alerts */
+    currentAdminAlerts: null,
+    /** @type {string} Currently selected template event */
+    activeTemplateEvent: 'ticket_created',
+    /** @type {number} Current log page */
+    logPage: 1,
+    /** @type {boolean} Whether we are in RTL mode */
+    isRTL: false
+  };
 
   // ──────────────────────────────────────────────
   // Initialization
@@ -94,7 +91,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof app !== 'undefined' && app.initialized) {
       app.initialized().then(function (_client) {
-        client = _client;
+        state.client = _client;
         bootApp();
       }).catch(function (err) {
         console.error('[kwtsms] FDK init failed:', err);
@@ -186,11 +183,11 @@
     const btn = document.getElementById('btn-lang-toggle');
     if (btn) {
       btn.addEventListener('click', function () {
-        isRTL = !isRTL;
-        document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+        state.isRTL = !state.isRTL;
+        document.documentElement.setAttribute('dir', state.isRTL ? 'rtl' : 'ltr');
         const label = document.getElementById('lang-toggle-label');
         if (label) {
-          label.textContent = isRTL ? 'EN' : 'AR';
+          label.textContent = state.isRTL ? 'EN' : 'AR';
         }
       });
     }
@@ -206,8 +203,8 @@
    * @returns {Promise<Object|null>} Parsed value or null
    */
   function dbGet(key) {
-    if (!client) return Promise.resolve(null);
-    return client.db.get(key).then(function (result) {
+    if (!state.client) return Promise.resolve(null);
+    return state.client.db.get(key).then(function (result) {
       const raw = result[key];
       if (typeof raw === 'string') {
         try { return JSON.parse(raw); } catch (e) { return raw; }
@@ -225,8 +222,8 @@
    * @returns {Promise}
    */
   function dbSet(key, value) {
-    if (!client) return Promise.resolve();
-    return client.db.set(key, { data: JSON.stringify(value) });
+    if (!state.client) return Promise.resolve();
+    return state.client.db.set(key, { data: JSON.stringify(value) });
   }
 
   /**
@@ -236,9 +233,9 @@
    * @returns {Promise<Object>} Query result
    */
   function entityGetAll(entity, opts) {
-    if (!client) return Promise.resolve({ records: [], next: null });
+    if (!state.client) return Promise.resolve({ records: [], next: null });
     const params = opts || {};
-    return client.db.entity.getAll(entity, params).catch(function () {
+    return state.client.db.entity.getAll(entity, params).catch(function () {
       return { records: [], next: null };
     });
   }
@@ -249,8 +246,8 @@
    * @returns {Promise}
    */
   function entityDeleteAll(entity) {
-    if (!client) return Promise.resolve();
-    return client.db.entity.deleteAll(entity).catch(function () {
+    if (!state.client) return Promise.resolve();
+    return state.client.db.entity.deleteAll(entity).catch(function () {
       // Ignore errors
     });
   }
@@ -452,7 +449,7 @@
    */
   function loadDashboardGateway() {
     dbGet(DS_KEYS.SETTINGS).then(function (settings) {
-      currentSettings = settings || DEFAULT_SETTINGS;
+      state.currentSettings = settings || DEFAULT_SETTINGS;
 
       // Connected dot: if we have gateway data, we're connected
       dbGet(DS_KEYS.GATEWAY).then(function (gw) {
@@ -460,15 +457,15 @@
         setStatusDot('gw-connected-dot', connected ? 'on' : 'off');
         setText('gw-connected-text', connected ? 'Connected' : 'Disconnected');
 
-        const enabled = currentSettings.enabled;
+        const enabled = state.currentSettings.enabled;
         setStatusDot('gw-enabled-dot', enabled ? 'on' : 'off');
         setText('gw-enabled-text', enabled ? 'Enabled' : 'Disabled');
 
-        const testMode = currentSettings.test_mode;
+        const testMode = state.currentSettings.test_mode;
         setStatusDot('gw-testmode-dot', testMode ? 'warn' : 'on');
         setText('gw-testmode-text', testMode ? 'Test Mode: ON' : 'Test Mode: OFF');
 
-        setText('gw-sender-id', currentSettings.active_sender_id || '--');
+        setText('gw-sender-id', state.currentSettings.active_sender_id || '--');
       }).catch(function () { /* ignored */ });
     }).catch(function () { /* ignored */ });
   }
@@ -496,13 +493,13 @@
   /**
    * Set a status dot class.
    * @param {string} id - Dot element ID
-   * @param {string} state - "on", "off", or "warn"
+   * @param {string} dotState - "on", "off", or "warn"
    */
-  function setStatusDot(id, state) {
+  function setStatusDot(id, dotState) {
     const dot = document.getElementById(id);
     if (!dot) return;
     dot.classList.remove('status-on', 'status-off', 'status-warn');
-    dot.classList.add('status-' + state);
+    dot.classList.add('status-' + dotState);
   }
 
   /**
@@ -619,12 +616,12 @@
    */
   function loadSettings() {
     dbGet(DS_KEYS.SETTINGS).then(function (settings) {
-      currentSettings = settings || DEFAULT_SETTINGS;
-      setCheckbox('setting-enabled', currentSettings.enabled);
-      setCheckbox('setting-test-mode', currentSettings.test_mode);
-      setCheckbox('setting-debug', currentSettings.debug);
-      setSelectValue('setting-language', currentSettings.language);
-      setSelectValue('setting-sender-id', currentSettings.active_sender_id);
+      state.currentSettings = settings || DEFAULT_SETTINGS;
+      setCheckbox('setting-enabled', state.currentSettings.enabled);
+      setCheckbox('setting-test-mode', state.currentSettings.test_mode);
+      setCheckbox('setting-debug', state.currentSettings.debug);
+      setSelectValue('setting-language', state.currentSettings.language);
+      setSelectValue('setting-sender-id', state.currentSettings.active_sender_id);
     }).catch(function () { /* ignored */ });
 
     // Gateway info
@@ -671,8 +668,8 @@
     }
 
     // Restore current selection
-    if (currentSettings && currentSettings.active_sender_id) {
-      select.value = currentSettings.active_sender_id;
+    if (state.currentSettings && state.currentSettings.active_sender_id) {
+      select.value = state.currentSettings.active_sender_id;
     }
   }
 
@@ -682,9 +679,9 @@
    * @param {*} value - New value
    */
   function saveSettingField(field, value) {
-    if (!currentSettings) currentSettings = Object.assign({}, DEFAULT_SETTINGS);
-    currentSettings[field] = value;
-    dbSet(DS_KEYS.SETTINGS, currentSettings).then(function () {
+    if (!state.currentSettings) state.currentSettings = Object.assign({}, DEFAULT_SETTINGS);
+    state.currentSettings[field] = value;
+    dbSet(DS_KEYS.SETTINGS, state.currentSettings).then(function () {
       showToast('Setting saved', 'success');
     }).catch(function () {
       showToast('Failed to save setting', 'error');
@@ -698,8 +695,8 @@
     const btn = document.getElementById('btn-sync-now');
     if (btn) btn.disabled = true;
 
-    if (client && client.request && client.request.invoke) {
-      client.request.invoke('syncGateway', {}).then(function () {
+    if (state.client && state.client.request && state.client.request.invoke) {
+      state.client.request.invoke('syncGateway', {}).then(function () {
         showToast('Gateway synced successfully', 'success');
         loadSettings();
         loadDashboard();
@@ -726,18 +723,18 @@
    * @returns {Promise}
    */
   function syncGatewayDirect() {
-    if (!client) return Promise.reject(new Error('No client'));
+    if (!state.client) return Promise.reject(new Error('No client'));
 
-    return client.iparams.get('kwtsms_username', 'kwtsms_password').then(function (iparams) {
+    return state.client.iparams.get('kwtsms_username', 'kwtsms_password').then(function (iparams) {
       const credBody = JSON.stringify({
         username: iparams.kwtsms_username,
         password: iparams.kwtsms_password
       });
 
       return Promise.all([
-        client.request.invokeTemplate('checkBalance', { body: credBody }),
-        client.request.invokeTemplate('getSenderIds', { body: credBody }),
-        client.request.invokeTemplate('getCoverage', { body: credBody })
+        state.client.request.invokeTemplate('checkBalance', { body: credBody }),
+        state.client.request.invokeTemplate('getSenderIds', { body: credBody }),
+        state.client.request.invokeTemplate('getCoverage', { body: credBody })
       ]);
     }).then(function (results) {
       const balance = JSON.parse(results[0].response);
@@ -778,8 +775,8 @@
     const sendBtn = document.getElementById('modal-test-send');
     if (sendBtn) sendBtn.disabled = true;
 
-    if (client && client.request && client.request.invoke) {
-      client.request.invoke('manualSendSms', {
+    if (state.client && state.client.request && state.client.request.invoke) {
+      state.client.request.invoke('manualSendSms', {
         data: { phone: phone, message: message }
       }).then(function (result) {
         if (result && result.response && result.response.success !== false) {
@@ -858,7 +855,7 @@
    */
   function loadTemplates() {
     dbGet(DS_KEYS.TEMPLATES).then(function (templates) {
-      currentTemplates = templates || {};
+      state.currentTemplates = templates || {};
       renderActiveTemplate();
     }).catch(function () { /* ignored */ });
   }
@@ -868,7 +865,7 @@
    * @param {string} eventKey - Template event key
    */
   function selectTemplateEvent(eventKey) {
-    activeTemplateEvent = eventKey;
+    state.activeTemplateEvent = eventKey;
 
     // Update pills
     const pills = document.querySelectorAll('.pill-btn[data-event]');
@@ -887,7 +884,7 @@
     const arTextarea = document.getElementById('template-ar');
     if (!enTextarea || !arTextarea) return;
 
-    const tmpl = currentTemplates[activeTemplateEvent] || {};
+    const tmpl = state.currentTemplates[state.activeTemplateEvent] || {};
     enTextarea.value = tmpl.en || '';
     arTextarea.value = tmpl.ar || '';
 
@@ -931,14 +928,14 @@
     const enTextarea = document.getElementById('template-en');
     const arTextarea = document.getElementById('template-ar');
     if (enTextarea && arTextarea) {
-      if (!currentTemplates[activeTemplateEvent]) {
-        currentTemplates[activeTemplateEvent] = {};
+      if (!state.currentTemplates[state.activeTemplateEvent]) {
+        state.currentTemplates[state.activeTemplateEvent] = {};
       }
-      currentTemplates[activeTemplateEvent].en = enTextarea.value;
-      currentTemplates[activeTemplateEvent].ar = arTextarea.value;
+      state.currentTemplates[state.activeTemplateEvent].en = enTextarea.value;
+      state.currentTemplates[state.activeTemplateEvent].ar = arTextarea.value;
     }
 
-    dbSet(DS_KEYS.TEMPLATES, currentTemplates).then(function () {
+    dbSet(DS_KEYS.TEMPLATES, state.currentTemplates).then(function () {
       showToast('Templates saved', 'success');
     }).catch(function () {
       showToast('Failed to save templates', 'error');
@@ -950,10 +947,10 @@
    */
   function handleTemplateReset() {
     const defaults = getDefaultTemplates();
-    const tmpl = defaults[activeTemplateEvent];
+    const tmpl = defaults[state.activeTemplateEvent];
     if (!tmpl) return;
 
-    currentTemplates[activeTemplateEvent] = { en: tmpl.en, ar: tmpl.ar };
+    state.currentTemplates[state.activeTemplateEvent] = { en: tmpl.en, ar: tmpl.ar };
     renderActiveTemplate();
     showToast('Template reset to default (save to apply)', 'warning');
   }
@@ -1002,7 +999,7 @@
     const filterBtn = document.getElementById('btn-log-filter');
     if (filterBtn) {
       filterBtn.addEventListener('click', function () {
-        logPage = 1;
+        state.logPage = 1;
         loadLogs();
       });
     }
@@ -1010,8 +1007,8 @@
     const prevBtn = document.getElementById('btn-log-prev');
     if (prevBtn) {
       prevBtn.addEventListener('click', function () {
-        if (logPage > 1) {
-          logPage--;
+        if (state.logPage > 1) {
+          state.logPage--;
           loadLogs();
         }
       });
@@ -1020,7 +1017,7 @@
     const nextBtn = document.getElementById('btn-log-next');
     if (nextBtn) {
       nextBtn.addEventListener('click', function () {
-        logPage++;
+        state.logPage++;
         loadLogs();
       });
     }
@@ -1048,7 +1045,7 @@
     const statusFilter = document.getElementById('log-filter-status');
 
     const params = {
-      page: logPage,
+      page: state.logPage,
       page_size: LOG_PAGE_SIZE
     };
 
@@ -1073,9 +1070,9 @@
       const nextBtn = document.getElementById('btn-log-next');
       const pageInfo = document.getElementById('log-page-info');
 
-      if (prevBtn) prevBtn.disabled = logPage <= 1;
+      if (prevBtn) prevBtn.disabled = state.logPage <= 1;
       if (nextBtn) nextBtn.disabled = !result || !result.next;
-      if (pageInfo) pageInfo.textContent = 'Page ' + logPage;
+      if (pageInfo) pageInfo.textContent = 'Page ' + state.logPage;
     }).catch(function () { /* ignored */ });
   }
 
@@ -1086,7 +1083,7 @@
     entityDeleteAll(ENTITY_SMS_LOG).then(function () {
       showToast('All logs cleared', 'success');
       hideModal('modal-clear-logs');
-      logPage = 1;
+      state.logPage = 1;
       loadLogs();
     }).catch(function () {
       showToast('Failed to clear logs', 'error');
@@ -1126,11 +1123,11 @@
    */
   function loadAdminAlerts() {
     dbGet(DS_KEYS.ADMIN_ALERTS).then(function (alerts) {
-      currentAdminAlerts = alerts || Object.assign({}, DEFAULT_ADMIN_ALERTS);
+      state.currentAdminAlerts = alerts || Object.assign({}, DEFAULT_ADMIN_ALERTS);
       renderAlertPhones();
-      setCheckbox('alert-new-ticket', currentAdminAlerts.events.new_ticket);
-      setCheckbox('alert-high-priority', currentAdminAlerts.events.high_priority);
-      setCheckbox('alert-escalation', currentAdminAlerts.events.escalation);
+      setCheckbox('alert-new-ticket', state.currentAdminAlerts.events.new_ticket);
+      setCheckbox('alert-high-priority', state.currentAdminAlerts.events.high_priority);
+      setCheckbox('alert-escalation', state.currentAdminAlerts.events.escalation);
     }).catch(function () { /* ignored */ });
   }
 
@@ -1147,7 +1144,7 @@
       list.removeChild(list.firstChild);
     }
 
-    const phones = (currentAdminAlerts && currentAdminAlerts.phones) || [];
+    const phones = (state.currentAdminAlerts && state.currentAdminAlerts.phones) || [];
 
     if (emptyMsg) {
       emptyMsg.style.display = phones.length === 0 ? 'block' : 'none';
@@ -1192,17 +1189,17 @@
       return;
     }
 
-    if (!currentAdminAlerts) {
-      currentAdminAlerts = Object.assign({}, DEFAULT_ADMIN_ALERTS);
+    if (!state.currentAdminAlerts) {
+      state.currentAdminAlerts = Object.assign({}, DEFAULT_ADMIN_ALERTS);
     }
 
     // Check for duplicates
-    if (currentAdminAlerts.phones.indexOf(phone) !== -1) {
+    if (state.currentAdminAlerts.phones.indexOf(phone) !== -1) {
       showToast('Phone number already added', 'warning');
       return;
     }
 
-    currentAdminAlerts.phones.push(phone);
+    state.currentAdminAlerts.phones.push(phone);
     input.value = '';
     renderAlertPhones();
     showToast('Phone added (save to apply)', 'success');
@@ -1214,11 +1211,11 @@
    */
   function handleRemoveAlertPhone(e) {
     const phone = e.currentTarget.getAttribute('data-phone');
-    if (!currentAdminAlerts || !phone) return;
+    if (!state.currentAdminAlerts || !phone) return;
 
-    const idx = currentAdminAlerts.phones.indexOf(phone);
+    const idx = state.currentAdminAlerts.phones.indexOf(phone);
     if (idx !== -1) {
-      currentAdminAlerts.phones.splice(idx, 1);
+      state.currentAdminAlerts.phones.splice(idx, 1);
       renderAlertPhones();
       showToast('Phone removed (save to apply)', 'success');
     }
@@ -1228,18 +1225,18 @@
    * Save admin alerts to Data Storage.
    */
   function handleSaveAlerts() {
-    if (!currentAdminAlerts) {
-      currentAdminAlerts = Object.assign({}, DEFAULT_ADMIN_ALERTS);
+    if (!state.currentAdminAlerts) {
+      state.currentAdminAlerts = Object.assign({}, DEFAULT_ADMIN_ALERTS);
     }
 
     // Read event toggles
-    currentAdminAlerts.events = {
+    state.currentAdminAlerts.events = {
       new_ticket: getCheckbox('alert-new-ticket'),
       high_priority: getCheckbox('alert-high-priority'),
       escalation: getCheckbox('alert-escalation')
     };
 
-    dbSet(DS_KEYS.ADMIN_ALERTS, currentAdminAlerts).then(function () {
+    dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).then(function () {
       showToast('Admin alerts saved', 'success');
     }).catch(function () {
       showToast('Failed to save admin alerts', 'error');
