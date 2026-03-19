@@ -1,0 +1,14 @@
+{
+  "name": "kwtsms-freshdesk",
+  "version": "1.0.0",
+  "description": "kwtSMS SMS Gateway integration for Freshdesk",
+  "main": "server/server.js",
+  "scripts": {
+    "test": "node --test test/",
+    "validate": "fdk validate",
+    "pack": "fdk pack"
+  },
+  "keywords": ["freshdesk", "sms", "kwtsms", "notifications"],
+  "author": "kwtSMS <support@kwtsms.com>",
+  "license": "MIT"
+}

@@ -1,0 +1,37 @@
+{
+  "platform-version": "2.3",
+  "product": {
+    "freshdesk": {
+      "location": {
+        "full_page_app": {
+          "url": "index.html",
+          "icon": "img/icon.svg"
+        },
+        "ticket_sidebar": {
+          "url": "sidebar.html",
+          "icon": "img/icon.svg"
+        }
+      },
+      "events": {
+        "onTicketCreate": { "handler": "onTicketCreateHandler" },
+        "onTicketUpdate": { "handler": "onTicketUpdateHandler" },
+        "onConversationCreate": { "handler": "onConversationCreateHandler" },
+        "onAppInstall": { "handler": "onAppInstallHandler" },
+        "onAppUninstall": { "handler": "onAppUninstallHandler" },
+        "onScheduledEvent": { "handler": "onScheduledEventHandler" }
+      }
+    }
+  },
+  "requests": {
+    "checkBalance": {},
+    "sendSms": {},
+    "getSenderIds": {},
+    "getCoverage": {},
+    "validatePhone": {}
+  },
+  "engines": {
+    "node": "18.x",
+    "fdk": "9.x"
+  },
+  "whitelisted-domains": ["https://www.kwtsms.com"]
+}

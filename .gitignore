@@ -1,0 +1,26 @@
+# FDK
+.fdk/
+node_modules/
+dist/
+*.zip
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+.claude/
+CLAUDE.md
+docs/
+.env
+.env.*
+*.log
+napkin.md
+.superpowers/
+.worktrees/
+docker/
+research/
