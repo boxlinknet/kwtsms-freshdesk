@@ -29,3 +29,5 @@ research/
 .playwright/
 coverage/
 *.yaml
+server/test_data/
+dist/
