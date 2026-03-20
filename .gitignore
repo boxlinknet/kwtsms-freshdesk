@@ -26,5 +26,6 @@ docker/
 research/
 .report.json
 .playwright-cli/
+.playwright/
 coverage/
 *.yaml
