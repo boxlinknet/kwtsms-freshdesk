@@ -1,5 +1,11 @@
 # kwtSMS for Freshdesk
 
+[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/boxlinknet/kwtsms-freshdesk/releases/tag/v0.5.0)
+[![Platform](https://img.shields.io/badge/platform-Freshdesk-green.svg)](https://www.freshworks.com/apps/)
+[![FDK](https://img.shields.io/badge/FDK-v2.3-orange.svg)](https://developers.freshworks.com/docs/app-sdk/v2.3/freshdesk/)
+[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE)
+[![kwtSMS](https://img.shields.io/badge/SMS%20Gateway-kwtSMS-0066cc.svg)](https://www.kwtsms.com)
+
 kwtSMS for Freshdesk integrates the kwtSMS SMS gateway with Freshdesk, enabling automatic and manual SMS notifications for ticket events, agent communications, and admin alerts directly from your Freshdesk account.
 
 ## Features
