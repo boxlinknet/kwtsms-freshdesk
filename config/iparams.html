@@ -222,19 +222,10 @@
       btnTest.textContent = 'Logging in...';
       showStatus('loading', 'Connecting to kwtSMS...');
 
-      // Call balance endpoint directly (cannot use invokeTemplate before iparams are saved)
-      let options = {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        })
-      };
-
-      client.request.post('https://www.kwtsms.com/API/balance/', options)
+      // Use invokeTemplate with dynamic body (domain whitelisted via requests.json)
+      client.request.invokeTemplate('checkBalance', {
+        body: JSON.stringify({ username: username, password: password })
+      })
         .then(function(data) {
           let response = JSON.parse(data.response);
           if (response.result === 'OK') {
@@ -258,18 +249,9 @@
     }
 
     function fetchSenderIds(username, password) {
-      let options = {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        })
-      };
-
-      client.request.post('https://www.kwtsms.com/API/senderid/', options)
+      client.request.invokeTemplate('getSenderIds', {
+        body: JSON.stringify({ username: username, password: password })
+      })
         .then(function(data) {
           let response = JSON.parse(data.response);
           if (response.result === 'OK' && response.senderid) {
