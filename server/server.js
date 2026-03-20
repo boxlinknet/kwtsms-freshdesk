@@ -57,7 +57,7 @@ const SMS_EVENT = {
 
 // Default settings (written on app install)
 const DEFAULT_SETTINGS = {
-  enabled: false,
+  enabled: true,
   test_mode: true,
   debug: false,
   language: 'en',
@@ -887,13 +887,17 @@ exports = {
       await $db.set(DS_KEYS.ADMIN_ALERTS, { data: JSON.stringify(DEFAULT_ADMIN_ALERTS) });
       await $db.set(DS_KEYS.STATS, { data: JSON.stringify(DEFAULT_STATS) });
 
-      // Register daily cron sync
-      await $schedule.create({
-        name: 'kwtsms_daily_sync',
-        data: { type: 'daily_sync' },
-        schedule_at: new Date(Date.now() + 3600000).toISOString(),
-        repeat: { time_unit: 'days', frequency: 1 }
-      });
+      // Register daily cron sync (ignore if already exists from previous install)
+      try {
+        await $schedule.create({
+          name: 'kwtsms_daily_sync',
+          data: { type: 'daily_sync' },
+          schedule_at: new Date(Date.now() + 3600000).toISOString(),
+          repeat: { time_unit: 'days', frequency: 1 }
+        });
+      } catch (schedErr) {
+        log('Schedule already exists or failed: ' + (schedErr.message || 'ignored'));
+      }
 
       log('App initialization complete.');
     } catch (err) {
