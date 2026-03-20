@@ -340,7 +340,7 @@ function buildPlaceholderData(payload, companyName, language) {
  * Log an SMS send result to Entity Store.
  * Non-fatal: catches and console.error on failure.
  */
-async function logSmsResult($db, entry) {
+async function logSmsResult(entry) {
   try {
     await $db.entity.create(ENTITY.SMS_LOG, {
       timestamp: new Date().toISOString(),
@@ -361,7 +361,7 @@ async function logSmsResult($db, entry) {
  * Increment stats counters after a send attempt.
  * Non-fatal: catches errors silently.
  */
-async function updateStats($db, success) {
+async function updateStats(success) {
   try {
     const { data: stats } = await $db.get(DS_KEYS.STATS);
     const parsed = typeof stats === 'string' ? JSON.parse(stats) : stats;
@@ -385,7 +385,7 @@ async function updateStats($db, success) {
 /**
  * Reset daily and monthly counters. Called by the scheduled cron handler.
  */
-async function resetCounters($db) {
+async function resetCounters() {
   try {
     const { data: stats } = await $db.get(DS_KEYS.STATS);
     const parsed = typeof stats === 'string' ? JSON.parse(stats) : stats;
@@ -433,7 +433,7 @@ function log(message) {
 /**
  * Guard: check plugin is enabled and return settings, or return an error result.
  */
-async function guardSettings($db) {
+async function guardSettings() {
   let settings;
   try {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
@@ -452,7 +452,7 @@ async function guardSettings($db) {
 /**
  * Guard: check gateway exists and has positive balance, or return an error result.
  */
-async function guardGateway($db) {
+async function guardGateway() {
   let gateway;
   try {
     const { data } = await $db.get(DS_KEYS.GATEWAY);
@@ -487,7 +487,7 @@ function prepareRecipients(phones, coverage, debug) {
 /**
  * Handle post-send: update balance cache, log result, update stats.
  */
-async function handleSendResult($db, result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
+async function handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
   const success = result.result === 'OK';
 
   if (success && result['balance-after'] !== undefined) {
@@ -499,7 +499,7 @@ async function handleSendResult($db, result, gateway, settings, recipients, even
     }
   }
 
-  await logSmsResult($db, {
+  await logSmsResult({
     event_type: eventType,
     recipient_phone: recipients.join(','),
     message_preview: cleanedMessage,
@@ -509,7 +509,7 @@ async function handleSendResult($db, result, gateway, settings, recipients, even
     msg_id: result['msg-id'] || ''
   });
 
-  await updateStats($db, success);
+  await updateStats(success);
 
   if (success) {
     log(`SMS sent: ${recipients.length} recipient(s), event=${eventType}, msg-id=${result['msg-id'] || 'n/a'}`);
@@ -523,13 +523,13 @@ async function handleSendResult($db, result, gateway, settings, recipients, even
  * Send SMS through the full guard chain.
  */
 async function send(params) {
-  const { $request, $db, credentials, phones, message, eventType, ticketId } = params;
+  const { credentials, phones, message, eventType, ticketId } = params;
 
-  const settingsGuard = await guardSettings($db);
+  const settingsGuard = await guardSettings();
   if (settingsGuard.error) return settingsGuard.error;
   const settings = settingsGuard.settings;
 
-  const gatewayGuard = await guardGateway($db);
+  const gatewayGuard = await guardGateway();
   if (gatewayGuard.error) return gatewayGuard.error;
   const gateway = gatewayGuard.gateway;
 
@@ -551,18 +551,18 @@ async function send(params) {
 
   let result;
   if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
-    result = await sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
+    result = await sendBatch(credentials, recipients.join(','), cleanedMessage, sender, testFlag);
   } else {
-    result = await bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
+    result = await bulkSend(credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
   }
 
-  return handleSendResult($db, result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
+  return handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
 }
 
 /**
  * Send a single batch (up to 200 numbers).
  */
-async function sendBatch($request, credentials, mobile, message, sender, test) {
+async function sendBatch(credentials, mobile, message, sender, test) {
   try {
     const response = await $request.invokeTemplate('sendSms', {
       body: JSON.stringify({
@@ -583,7 +583,7 @@ async function sendBatch($request, credentials, mobile, message, sender, test) {
 /**
  * Send to >200 numbers by chunking with delays and ERR013 backoff.
  */
-async function bulkSend($request, credentials, recipients, message, sender, test, debug) {
+async function bulkSend(credentials, recipients, message, sender, test, debug) {
   let lastResult = { result: 'ERROR', description: 'No batches sent' };
 
   for (let i = 0; i < recipients.length; i += KWTSMS.MAX_BATCH_SIZE) {
@@ -595,7 +595,7 @@ async function bulkSend($request, credentials, recipients, message, sender, test
 
     let attempt = 0;
     while (attempt <= KWTSMS.MAX_RETRIES) {
-      const result = await sendBatch($request, credentials, batch.join(','), message, sender, test);
+      const result = await sendBatch(credentials, batch.join(','), message, sender, test);
 
       if (result.code === 'ERR013' && attempt < KWTSMS.MAX_RETRIES) {
         debugLog(`ERR013 queue full, backing off ${KWTSMS.ERR013_BACKOFF_MS[attempt]}ms`, debug);
@@ -623,21 +623,21 @@ function getCredentials(args) {
   return { username: args.iparams.kwtsms_username, password: args.iparams.kwtsms_password };
 }
 
-async function loadSettings($db) {
+async function loadSettings() {
   try {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
     return typeof data === 'string' ? JSON.parse(data) : data;
   } catch (e) { return null; }
 }
 
-async function loadTemplates($db) {
+async function loadTemplates() {
   try {
     const { data } = await $db.get(DS_KEYS.TEMPLATES);
     return typeof data === 'string' ? JSON.parse(data) : data;
   } catch (e) { return {}; }
 }
 
-async function loadAdminAlerts($db) {
+async function loadAdminAlerts() {
   try {
     const { data } = await $db.get(DS_KEYS.ADMIN_ALERTS);
     return typeof data === 'string' ? JSON.parse(data) : data;
@@ -660,18 +660,18 @@ async function sendCustomerTicketCreated(ctx, payload, templates, settings, plac
   await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.TICKET_CREATED, ticketId });
 }
 
-async function sendAdminNewTicket(ctx, $db, templates, settings, placeholders, ticketId) {
-  const adminAlerts = await loadAdminAlerts($db);
+async function sendAdminNewTicket(ctx, templates, settings, placeholders, ticketId) {
+  const adminAlerts = await loadAdminAlerts();
   if (adminAlerts.phones.length === 0 || !adminAlerts.events.new_ticket) return;
   const adminMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_NEW_TICKET, settings.language, placeholders);
   if (!adminMsg) return;
   await send({ ...ctx, phones: adminAlerts.phones, message: adminMsg, eventType: SMS_EVENT.ADMIN_NEW_TICKET, ticketId });
 }
 
-async function sendAdminHighPriority(ctx, $db, payload, templates, settings, placeholders, ticketId) {
+async function sendAdminHighPriority(ctx, payload, templates, settings, placeholders, ticketId) {
   const priority = payload.ticket?.priority;
   if (!priority || priority < TICKET_PRIORITY.HIGH) return;
-  const adminAlerts = await loadAdminAlerts($db);
+  const adminAlerts = await loadAdminAlerts();
   if (adminAlerts.phones.length === 0 || !adminAlerts.events.high_priority) return;
   const highMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_HIGH_PRIORITY, settings.language, placeholders);
   if (!highMsg) return;
@@ -689,12 +689,12 @@ async function sendStatusChanged(ctx, payload, changes, templates, settings, pla
   await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.STATUS_CHANGED, ticketId });
 }
 
-async function sendEscalationAlert(ctx, $db, changes, templates, settings, placeholders, ticketId) {
+async function sendEscalationAlert(ctx, changes, templates, settings, placeholders, ticketId) {
   if (!changes.priority) return;
   const oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
   const newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
   if (!oldPriority || oldPriority > TICKET_PRIORITY.MEDIUM || newPriority < TICKET_PRIORITY.HIGH) return;
-  const adminAlerts = await loadAdminAlerts($db);
+  const adminAlerts = await loadAdminAlerts();
   if (adminAlerts.phones.length === 0 || !adminAlerts.events.escalation) return;
   const escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
   if (!escalMsg) return;
@@ -708,42 +708,42 @@ async function sendEscalationAlert(ctx, $db, changes, templates, settings, place
 exports = {
   onTicketCreateHandler: async function(args) {
     const { data: payload } = args;
-    const $db = args.$db;
-    const $request = args.$request;
+    
+    
 
-    const settings = await loadSettings($db);
+    const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
     const credentials = await getCredentials(args);
-    const templates = await loadTemplates($db);
+    const templates = await loadTemplates();
     const companyName = await getCompanyName(args);
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
     const ticketIdVal = payload.ticket?.id;
-    const sendCtx = { $request, $db, credentials };
+    const sendCtx = { credentials };
 
     await sendCustomerTicketCreated(sendCtx, payload, templates, settings, placeholders, ticketIdVal);
-    await sendAdminNewTicket(sendCtx, $db, templates, settings, placeholders, ticketIdVal);
-    await sendAdminHighPriority(sendCtx, $db, payload, templates, settings, placeholders, ticketIdVal);
+    await sendAdminNewTicket(sendCtx, templates, settings, placeholders, ticketIdVal);
+    await sendAdminHighPriority(sendCtx, payload, templates, settings, placeholders, ticketIdVal);
   },
 
   onTicketUpdateHandler: async function(args) {
     const { data: payload } = args;
-    const $db = args.$db;
-    const $request = args.$request;
+    
+    
     const changes = payload.changes || {};
 
-    const settings = await loadSettings($db);
+    const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
     const credentials = await getCredentials(args);
-    const templates = await loadTemplates($db);
+    const templates = await loadTemplates();
     const companyName = await getCompanyName(args);
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
     const ticketIdVal = payload.ticket?.id;
-    const sendCtx = { $request, $db, credentials };
+    const sendCtx = { credentials };
 
     await sendStatusChanged(sendCtx, payload, changes, templates, settings, placeholders, ticketIdVal);
-    await sendEscalationAlert(sendCtx, $db, changes, templates, settings, placeholders, ticketIdVal);
+    await sendEscalationAlert(sendCtx, changes, templates, settings, placeholders, ticketIdVal);
   },
 
   onConversationCreateHandler: async function(args) {
@@ -754,22 +754,22 @@ exports = {
     if (conversation.incoming !== false) return;
     if (conversation.private !== false) return;
 
-    const $db = args.$db;
-    const settings = await loadSettings($db);
+    
+    const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
     const customerPhone = payload.requester?.phone;
     if (!customerPhone) return;
 
     const credentials = await getCredentials(args);
-    const templates = await loadTemplates($db);
+    const templates = await loadTemplates();
     const companyName = await getCompanyName(args);
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
     const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
     if (!message) return;
 
     await send({
-      $request: args.$request, $db, credentials,
+      credentials,
       phones: [customerPhone],
       message,
       eventType: SMS_EVENT.AGENT_REPLY,
@@ -778,8 +778,8 @@ exports = {
   },
 
   onScheduledEventHandler: async function(args) {
-    const $db = args.$db;
-    const $request = args.$request;
+    
+    
 
     // Future-proofing: check event type
     const eventType = args.data?.type || 'daily_sync';
@@ -812,7 +812,7 @@ exports = {
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
 
       // Reset daily/monthly stats counters
-      await resetCounters($db);
+      await resetCounters();
 
       log('Daily sync complete. Balance: ' + gateway.balance +
           ', SenderIDs: ' + gateway.senderids.length +
@@ -823,9 +823,9 @@ exports = {
   },
 
   onAppInstallHandler: async function(args) {
-    const $db = args.$db;
-    const $request = args.$request;
-    const $schedule = args.$schedule;
+    
+    
+    
 
     log('App installed. Initializing...');
 
@@ -905,8 +905,8 @@ exports = {
   },
 
   onAppUninstallHandler: async function(args) {
-    const $db = args.$db;
-    const $schedule = args.$schedule;
+    
+    
 
     log('App uninstalling. Cleaning up...');
 
@@ -930,8 +930,8 @@ exports = {
     const phone = smiData.phone;
     const message = smiData.message;
     const ticket_id = smiData.ticket_id;
-    const $db = args.$db;
-    const $request = args.$request;
+    
+    
 
     if (!phone || !message) {
       return { success: false, message: 'Phone and message are required' };
@@ -940,8 +940,6 @@ exports = {
     const credentials = await getCredentials(args);
 
     return await send({
-      $request: $request,
-      $db: $db,
       credentials: credentials,
       phones: [phone],
       message: message,
