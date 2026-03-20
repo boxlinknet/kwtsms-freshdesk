@@ -70,9 +70,20 @@ function cleanMessage(message) {
   return text;
 }
 
+/**
+ * GSM-7 basic charset + extended charset as a string for indexOf lookup.
+ * Avoids regex with unnecessary escapes that trigger linter warnings.
+ */
+const GSM7_ALL = '@\u00A3$\u00A5\u00E8\u00E9\u00F9\u00EC\u00F2\u00C7\n\u00D8\u00F8\r\u00C5\u00E5\u0394_\u03A6\u0393\u039B\u03A9\u03A0\u03A8\u03A3\u0398\u039E'
+  + ' \u00C6\u00E6\u00DF\u00C9!"#\u00A4%&\'()*+,-./0123456789:;<=>?'
+  + '\u00A1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00C4\u00D6\u00D1\u00DC\u00A7\u00BFabcdefghijklmnopqrstuvwxyz\u00E4\u00F6\u00F1\u00FC\u00E0'
+  + '\f^{}[]~|\\' + '\u20AC';
+
 function isUnicode(text) {
-  const gsm7 = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ!"#¤%&'()*+,\-.\/0-9:;<=>?¡A-ZÄÖÑÜa-zäöñüà\u000C^{}\[~\]|€]*$/;
-  return !gsm7.test(text);
+  for (let i = 0; i < text.length; i++) {
+    if (GSM7_ALL.indexOf(text[i]) === -1) return true;
+  }
+  return false;
 }
 
 function calculateSmsParts(text) {

@@ -13,6 +13,130 @@ const { logSmsResult, updateStats, debugLog, log } = require('./logger');
 const { DS_KEYS, KWTSMS, NON_RETRYABLE_ERRORS } = require('./constants');
 
 /**
+ * Guard: check plugin is enabled and return settings, or return an error result.
+ */
+async function guardSettings($db) {
+  let settings;
+  try {
+    const { data } = await $db.get(DS_KEYS.SETTINGS);
+    settings = typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (err) {
+    log('Settings not found, plugin may not be initialized');
+    return { error: { success: false, message: 'Plugin not configured' } };
+  }
+  if (!settings.enabled) {
+    debugLog('Send skipped: plugin disabled', settings.debug);
+    return { error: { success: false, message: 'SMS gateway is disabled' } };
+  }
+  return { settings };
+}
+
+/**
+ * Guard: check gateway exists and has positive balance, or return an error result.
+ */
+async function guardGateway($db) {
+  let gateway;
+  try {
+    const { data } = await $db.get(DS_KEYS.GATEWAY);
+    gateway = typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (err) {
+    log('Gateway data not found');
+    return { error: { success: false, message: 'Gateway not configured' } };
+  }
+  if (!gateway.balance || gateway.balance <= 0) {
+    log('Send skipped: zero balance');
+    return { error: { success: false, message: 'Insufficient balance' } };
+  }
+  return { gateway };
+}
+
+/**
+ * Prepare recipients: normalize, validate, filter by coverage, deduplicate.
+ */
+function prepareRecipients(phones, coverage, debug) {
+  const normalized = phones.map(normalize).filter(validate);
+  const covered = normalized.filter((phone) => {
+    if (coverage.length === 0) return true;
+    const isCovered = coverage.some((c) => phone.startsWith(String(c)));
+    if (!isCovered) {
+      debugLog(`Phone ${phone.substring(0, 6)}*** skipped: country not in coverage`, debug);
+    }
+    return isCovered;
+  });
+  return deduplicate(covered);
+}
+
+/**
+ * Dispatch the actual send call (single batch or bulk).
+ */
+async function dispatchSend($request, credentials, recipients, cleanedMessage, settings) {
+  const testFlag = settings.test_mode ? '1' : '0';
+  const sender = settings.active_sender_id || 'KWT-SMS';
+  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
+
+  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
+    return sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
+  }
+  return bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
+}
+
+/**
+ * Update the cached gateway balance after a successful send.
+ */
+async function updateCachedBalance($db, result, gateway, debug) {
+  if (result['balance-after'] === undefined) return;
+  try {
+    gateway.balance = result['balance-after'];
+    await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+  } catch (err) {
+    debugLog('Failed to update cached balance: ' + err.message, debug);
+  }
+}
+
+/**
+ * Build a log entry object from send result details.
+ */
+function buildLogEntry(eventType, recipients, cleanedMessage, success, result, ticketId) {
+  return {
+    event_type: eventType,
+    recipient_phone: recipients.join(','),
+    message_preview: cleanedMessage,
+    status: success ? 'sent' : 'failed',
+    api_response_code: result.code || result.result || '',
+    ticket_id: ticketId || 0,
+    msg_id: result['msg-id'] || ''
+  };
+}
+
+/**
+ * Format a success or failure response from a send result.
+ */
+function formatSendResponse(success, result, recipients, eventType) {
+  if (success) {
+    log(`SMS sent: ${recipients.length} recipient(s), event=${eventType}, msg-id=${result['msg-id'] || 'n/a'}`);
+    return { success: true, message: 'Sent successfully' };
+  }
+  log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
+  return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
+}
+
+/**
+ * Handle post-send: update balance cache, log result, update stats.
+ */
+async function handleSendResult($db, result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
+  const success = result.result === 'OK';
+
+  if (success) {
+    await updateCachedBalance($db, result, gateway, settings.debug);
+  }
+
+  await logSmsResult($db, buildLogEntry(eventType, recipients, cleanedMessage, success, result, ticketId));
+  await updateStats($db, success);
+
+  return formatSendResponse(success, result, recipients, eventType);
+}
+
+/**
  * Send SMS through the full guard chain.
  *
  * @param {Object} params
@@ -27,110 +151,28 @@ const { DS_KEYS, KWTSMS, NON_RETRYABLE_ERRORS } = require('./constants');
 async function send(params) {
   const { $request, $db, credentials, phones, message, eventType, ticketId } = params;
 
-  // --- GUARD 1: Plugin enabled ---
-  let settings;
-  try {
-    const { data } = await $db.get(DS_KEYS.SETTINGS);
-    settings = typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (err) {
-    log('Settings not found, plugin may not be initialized');
-    return { success: false, message: 'Plugin not configured' };
-  }
+  const settingsGuard = await guardSettings($db);
+  if (settingsGuard.error) return settingsGuard.error;
+  const settings = settingsGuard.settings;
 
-  if (!settings.enabled) {
-    debugLog('Send skipped: plugin disabled', settings.debug);
-    return { success: false, message: 'SMS gateway is disabled' };
-  }
+  const gatewayGuard = await guardGateway($db);
+  if (gatewayGuard.error) return gatewayGuard.error;
+  const gateway = gatewayGuard.gateway;
 
-  // --- GUARD 2: Gateway configured (iparams exist if we got this far) ---
-
-  // --- GUARD 3: Balance > 0 ---
-  let gateway;
-  try {
-    const { data } = await $db.get(DS_KEYS.GATEWAY);
-    gateway = typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (err) {
-    log('Gateway data not found');
-    return { success: false, message: 'Gateway not configured' };
-  }
-
-  if (!gateway.balance || gateway.balance <= 0) {
-    log('Send skipped: zero balance');
-    return { success: false, message: 'Insufficient balance' };
-  }
-
-  // --- PREPARE MESSAGE ---
   const cleanedMessage = cleanMessage(message);
   if (!cleanedMessage) {
     log('Send skipped: empty message after cleaning');
     return { success: false, message: 'Message is empty after cleaning' };
   }
 
-  // --- PREPARE RECIPIENTS ---
-  const normalized = phones.map(normalize).filter(validate);
-  const coverage = gateway.coverage || [];
-  const covered = normalized.filter((phone) => {
-    if (coverage.length === 0) return true;
-    const isCovered = coverage.some((c) => phone.startsWith(String(c)));
-    if (!isCovered) {
-      debugLog(`Phone ${phone.substring(0, 6)}*** skipped: country not in coverage`, settings.debug);
-    }
-    return isCovered;
-  });
-  const recipients = deduplicate(covered);
-
+  const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
   if (recipients.length === 0) {
     log('Send skipped: no valid recipients after filtering');
     return { success: false, message: 'No valid recipients' };
   }
 
-  // --- SEND ---
-  const testFlag = settings.test_mode ? '1' : '0';
-  const sender = settings.active_sender_id || 'KWT-SMS';
-
-  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
-
-  let result;
-  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
-    result = await sendBatch($request, credentials, recipients.join(','), cleanedMessage, sender, testFlag);
-  } else {
-    result = await bulkSend($request, credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
-  }
-
-  // --- LOG & STATS ---
-  const success = result.result === 'OK';
-
-  // Update cached balance from send response
-  if (success && result['balance-after'] !== undefined) {
-    try {
-      gateway.balance = result['balance-after'];
-      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-    } catch (err) {
-      debugLog('Failed to update cached balance: ' + err.message, settings.debug);
-    }
-  }
-
-  // Log to Entity Store (non-fatal)
-  await logSmsResult($db, {
-    event_type: eventType,
-    recipient_phone: recipients.join(','),
-    message_preview: cleanedMessage,
-    status: success ? 'sent' : 'failed',
-    api_response_code: result.code || result.result || '',
-    ticket_id: ticketId || 0,
-    msg_id: result['msg-id'] || ''
-  });
-
-  // Update stats (non-fatal)
-  await updateStats($db, success);
-
-  if (success) {
-    log(`SMS sent: ${recipients.length} recipient(s), event=${eventType}, msg-id=${result['msg-id'] || 'n/a'}`);
-    return { success: true, message: 'Sent successfully' };
-  } else {
-    log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
-    return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
-  }
+  const result = await dispatchSend($request, credentials, recipients, cleanedMessage, settings);
+  return handleSendResult($db, result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
 }
 
 /**

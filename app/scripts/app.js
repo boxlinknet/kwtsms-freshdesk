@@ -142,34 +142,53 @@
   }
 
   /**
+   * Map of tab IDs to their data-loading functions.
+   * @type {Object<string, Function>}
+   */
+  var TAB_LOADERS = {
+    'dashboard': function () { loadDashboard(); },
+    'settings': function () { loadSettings(); },
+    'templates': function () { loadTemplates(); },
+    'logs': function () { loadLogs(); },
+    'admin-alerts': function () { loadAdminAlerts(); }
+  };
+
+  /**
+   * Update tab button active states.
+   * @param {string} tabId - Active tab identifier
+   */
+  function updateTabButtons(tabId) {
+    var tabButtons = document.querySelectorAll('.tab-btn');
+    for (var i = 0; i < tabButtons.length; i++) {
+      var btn = tabButtons[i];
+      var isActive = btn.getAttribute('data-tab') === tabId;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    }
+  }
+
+  /**
+   * Update tab panel visibility.
+   * @param {string} tabId - Active tab identifier
+   */
+  function updateTabPanels(tabId) {
+    var panels = document.querySelectorAll('.tab-panel');
+    for (var j = 0; j < panels.length; j++) {
+      panels[j].classList.toggle('active', panels[j].id === 'tab-' + tabId);
+    }
+  }
+
+  /**
    * Activate a specific tab by ID.
    * @param {string} tabId - Tab identifier (e.g., "dashboard", "settings")
    */
   function activateTab(tabId) {
-    // Update buttons
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    for (let i = 0; i < tabButtons.length; i++) {
-      const btn = tabButtons[i];
-      const isActive = btn.getAttribute('data-tab') === tabId;
-      btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    }
-
-    // Update panels
-    const panels = document.querySelectorAll('.tab-panel');
-    for (let j = 0; j < panels.length; j++) {
-      panels[j].classList.toggle('active', panels[j].id === 'tab-' + tabId);
-    }
+    updateTabButtons(tabId);
+    updateTabPanels(tabId);
 
     // Load data for the activated tab
-    switch (tabId) {
-      case 'dashboard': loadDashboard(); break;
-      case 'settings': loadSettings(); break;
-      case 'templates': loadTemplates(); break;
-      case 'logs': loadLogs(); break;
-      case 'admin-alerts': loadAdminAlerts(); break;
-      // help is static, no loading needed
-    }
+    var loader = TAB_LOADERS[tabId];
+    if (loader) { loader(); }
   }
 
   // ──────────────────────────────────────────────
@@ -445,27 +464,40 @@
   }
 
   /**
+   * Render gateway connection status indicators.
+   * @param {Object|null} gw - Gateway data
+   */
+  function renderGatewayConnection(gw) {
+    var connected = gw && gw.last_sync;
+    setStatusDot('gw-connected-dot', connected ? 'on' : 'off');
+    setText('gw-connected-text', connected ? 'Connected' : 'Disconnected');
+  }
+
+  /**
+   * Render gateway toggle status indicators from current settings.
+   */
+  function renderGatewayToggles() {
+    var enabled = state.currentSettings.enabled;
+    setStatusDot('gw-enabled-dot', enabled ? 'on' : 'off');
+    setText('gw-enabled-text', enabled ? 'Enabled' : 'Disabled');
+
+    var testMode = state.currentSettings.test_mode;
+    setStatusDot('gw-testmode-dot', testMode ? 'warn' : 'on');
+    setText('gw-testmode-text', testMode ? 'Test Mode: ON' : 'Test Mode: OFF');
+
+    setText('gw-sender-id', state.currentSettings.active_sender_id || '--');
+  }
+
+  /**
    * Load and render gateway status indicators.
    */
   function loadDashboardGateway() {
     dbGet(DS_KEYS.SETTINGS).then(function (settings) {
       state.currentSettings = settings || DEFAULT_SETTINGS;
 
-      // Connected dot: if we have gateway data, we're connected
       dbGet(DS_KEYS.GATEWAY).then(function (gw) {
-        const connected = gw && gw.last_sync;
-        setStatusDot('gw-connected-dot', connected ? 'on' : 'off');
-        setText('gw-connected-text', connected ? 'Connected' : 'Disconnected');
-
-        const enabled = state.currentSettings.enabled;
-        setStatusDot('gw-enabled-dot', enabled ? 'on' : 'off');
-        setText('gw-enabled-text', enabled ? 'Enabled' : 'Disabled');
-
-        const testMode = state.currentSettings.test_mode;
-        setStatusDot('gw-testmode-dot', testMode ? 'warn' : 'on');
-        setText('gw-testmode-text', testMode ? 'Test Mode: ON' : 'Test Mode: OFF');
-
-        setText('gw-sender-id', state.currentSettings.active_sender_id || '--');
+        renderGatewayConnection(gw);
+        renderGatewayToggles();
       }).catch(function () { /* ignored */ });
     }).catch(function () { /* ignored */ });
   }
@@ -503,72 +535,84 @@
   }
 
   /**
+   * Build a single activity table row from a record.
+   * @param {Object} rec - Log record data
+   * @returns {HTMLTableRowElement}
+   */
+  function buildActivityRow(rec) {
+    var tr = document.createElement('tr');
+
+    var tdTime = document.createElement('td');
+    tdTime.textContent = formatDate(rec.timestamp);
+    tr.appendChild(tdTime);
+
+    var tdEvent = document.createElement('td');
+    var badge = document.createElement('span');
+    badge.className = 'badge badge-event';
+    badge.textContent = formatEventLabel(rec.event_type);
+    tdEvent.appendChild(badge);
+    tr.appendChild(tdEvent);
+
+    var tdRecip = document.createElement('td');
+    tdRecip.textContent = rec.recipient_phone || '--';
+    tr.appendChild(tdRecip);
+
+    var tdMsg = document.createElement('td');
+    var msgSpan = document.createElement('span');
+    msgSpan.className = 'text-truncate';
+    msgSpan.textContent = truncate(rec.message_preview, 50);
+    msgSpan.title = rec.message_preview || '';
+    tdMsg.appendChild(msgSpan);
+    tr.appendChild(tdMsg);
+
+    var tdStatus = document.createElement('td');
+    var statusBadge = document.createElement('span');
+    var isSent = rec.status === 'sent';
+    statusBadge.className = 'badge ' + (isSent ? 'badge-sent' : 'badge-failed');
+    statusBadge.textContent = isSent ? 'Sent' : 'Failed';
+    tdStatus.appendChild(statusBadge);
+    tr.appendChild(tdStatus);
+
+    return tr;
+  }
+
+  /**
+   * Render an empty-state row into a table body.
+   * @param {HTMLElement} tbody - Table body element
+   * @param {string} emptyMsg - Message when no records
+   */
+  function renderEmptyRow(tbody, emptyMsg) {
+    var emptyTr = document.createElement('tr');
+    emptyTr.className = 'empty-row';
+    var emptyTd = document.createElement('td');
+    emptyTd.setAttribute('colspan', '5');
+    emptyTd.textContent = emptyMsg;
+    emptyTr.appendChild(emptyTd);
+    tbody.appendChild(emptyTr);
+  }
+
+  /**
    * Render SMS log records into a table body.
    * @param {string} tbodyId - Table body element ID
    * @param {Array} records - Entity Store records
    * @param {string} emptyMsg - Message when no records
    */
   function renderActivityTable(tbodyId, records, emptyMsg) {
-    const tbody = document.getElementById(tbodyId);
+    var tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
-    // Clear existing rows
     while (tbody.firstChild) {
       tbody.removeChild(tbody.firstChild);
     }
 
     if (!records || records.length === 0) {
-      const emptyTr = document.createElement('tr');
-      emptyTr.className = 'empty-row';
-      const emptyTd = document.createElement('td');
-      emptyTd.setAttribute('colspan', '5');
-      emptyTd.textContent = emptyMsg;
-      emptyTr.appendChild(emptyTd);
-      tbody.appendChild(emptyTr);
+      renderEmptyRow(tbody, emptyMsg);
       return;
     }
 
-    for (let i = 0; i < records.length; i++) {
-      const rec = records[i].data || records[i];
-      const tr = document.createElement('tr');
-
-      // Time
-      const tdTime = document.createElement('td');
-      tdTime.textContent = formatDate(rec.timestamp);
-      tr.appendChild(tdTime);
-
-      // Event type badge
-      const tdEvent = document.createElement('td');
-      const badge = document.createElement('span');
-      badge.className = 'badge badge-event';
-      badge.textContent = formatEventLabel(rec.event_type);
-      tdEvent.appendChild(badge);
-      tr.appendChild(tdEvent);
-
-      // Recipient
-      const tdRecip = document.createElement('td');
-      tdRecip.textContent = rec.recipient_phone || '--';
-      tr.appendChild(tdRecip);
-
-      // Message (truncated)
-      const tdMsg = document.createElement('td');
-      const msgSpan = document.createElement('span');
-      msgSpan.className = 'text-truncate';
-      msgSpan.textContent = truncate(rec.message_preview, 50);
-      msgSpan.title = rec.message_preview || '';
-      tdMsg.appendChild(msgSpan);
-      tr.appendChild(tdMsg);
-
-      // Status badge
-      const tdStatus = document.createElement('td');
-      const statusBadge = document.createElement('span');
-      const isSent = rec.status === 'sent';
-      statusBadge.className = 'badge ' + (isSent ? 'badge-sent' : 'badge-failed');
-      statusBadge.textContent = isSent ? 'Sent' : 'Failed';
-      tdStatus.appendChild(statusBadge);
-      tr.appendChild(tdStatus);
-
-      tbody.appendChild(tr);
+    for (var i = 0; i < records.length; i++) {
+      var rec = records[i].data || records[i];
+      tbody.appendChild(buildActivityRow(rec));
     }
   }
 
@@ -753,41 +797,59 @@
   }
 
   /**
-   * Handle Send Test SMS from modal.
+   * Validate test SMS inputs and return phone/message or null.
+   * @returns {{ phone: string, message: string }|null}
    */
-  function handleSendTestSms() {
-    const phoneInput = document.getElementById('test-phone');
-    const msgInput = document.getElementById('test-message');
-    if (!phoneInput || !msgInput) return;
+  function validateTestSmsInputs() {
+    var phoneInput = document.getElementById('test-phone');
+    var msgInput = document.getElementById('test-message');
+    if (!phoneInput || !msgInput) return null;
 
-    const phone = phoneInput.value.trim();
-    const message = msgInput.value.trim();
+    var phone = phoneInput.value.trim();
+    var message = msgInput.value.trim();
 
     if (!phone) {
       showToast('Please enter a phone number', 'warning');
-      return;
+      return null;
     }
     if (!message) {
       showToast('Please enter a message', 'warning');
-      return;
+      return null;
     }
+    return { phone: phone, message: message };
+  }
 
-    const sendBtn = document.getElementById('modal-test-send');
+  /**
+   * Process the result of sending a test SMS.
+   * @param {Object} result - Invoke result
+   */
+  function handleTestSmsResult(result) {
+    var phoneInput = document.getElementById('test-phone');
+    var msgInput = document.getElementById('test-message');
+    if (result && result.response && result.response.success !== false) {
+      showToast('Test SMS sent successfully', 'success');
+      hideModal('modal-test-sms');
+      if (phoneInput) phoneInput.value = '';
+      if (msgInput) msgInput.value = '';
+    } else {
+      showToast('Failed to send test SMS', 'error');
+    }
+  }
+
+  /**
+   * Handle Send Test SMS from modal.
+   */
+  function handleSendTestSms() {
+    var inputs = validateTestSmsInputs();
+    if (!inputs) return;
+
+    var sendBtn = document.getElementById('modal-test-send');
     if (sendBtn) sendBtn.disabled = true;
 
     if (state.client && state.client.request && state.client.request.invoke) {
       state.client.request.invoke('manualSendSms', {
-        data: { phone: phone, message: message }
-      }).then(function (result) {
-        if (result && result.response && result.response.success !== false) {
-          showToast('Test SMS sent successfully', 'success');
-          hideModal('modal-test-sms');
-          phoneInput.value = '';
-          msgInput.value = '';
-        } else {
-          showToast('Failed to send test SMS', 'error');
-        }
-      }).catch(function (err) {
+        data: { phone: inputs.phone, message: inputs.message }
+      }).then(handleTestSmsResult).catch(function (err) {
         showToast('Error: ' + (err.message || 'Send failed'), 'error');
       }).finally(function () {
         if (sendBtn) sendBtn.disabled = false;
@@ -1132,41 +1194,49 @@
   }
 
   /**
+   * Build a single phone list item element.
+   * @param {string} phone - Phone number
+   * @returns {HTMLLIElement}
+   */
+  function buildPhoneListItem(phone) {
+    var li = document.createElement('li');
+    li.className = 'phone-item';
+
+    var numSpan = document.createElement('span');
+    numSpan.className = 'phone-number';
+    numSpan.textContent = phone;
+    li.appendChild(numSpan);
+
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'phone-remove';
+    removeBtn.textContent = 'Remove';
+    removeBtn.setAttribute('data-phone', phone);
+    removeBtn.addEventListener('click', handleRemoveAlertPhone);
+    li.appendChild(removeBtn);
+
+    return li;
+  }
+
+  /**
    * Render the phone list for admin alerts.
    */
   function renderAlertPhones() {
-    const list = document.getElementById('alert-phone-list');
-    const emptyMsg = document.getElementById('alert-phones-empty');
+    var list = document.getElementById('alert-phone-list');
+    var emptyMsg = document.getElementById('alert-phones-empty');
     if (!list) return;
 
-    // Clear existing
     while (list.firstChild) {
       list.removeChild(list.firstChild);
     }
 
-    const phones = (state.currentAdminAlerts && state.currentAdminAlerts.phones) || [];
+    var phones = (state.currentAdminAlerts && state.currentAdminAlerts.phones) || [];
 
     if (emptyMsg) {
       emptyMsg.style.display = phones.length === 0 ? 'block' : 'none';
     }
 
-    for (let i = 0; i < phones.length; i++) {
-      const li = document.createElement('li');
-      li.className = 'phone-item';
-
-      const numSpan = document.createElement('span');
-      numSpan.className = 'phone-number';
-      numSpan.textContent = phones[i];
-      li.appendChild(numSpan);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'phone-remove';
-      removeBtn.textContent = 'Remove';
-      removeBtn.setAttribute('data-phone', phones[i]);
-      removeBtn.addEventListener('click', handleRemoveAlertPhone);
-      li.appendChild(removeBtn);
-
-      list.appendChild(li);
+    for (var i = 0; i < phones.length; i++) {
+      list.appendChild(buildPhoneListItem(phones[i]));
     }
   }
 

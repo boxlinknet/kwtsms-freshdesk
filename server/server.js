@@ -312,24 +312,43 @@ function resolvePriorityLabel(priorityCode, language) {
 }
 
 /**
- * Build placeholder data object from a Freshdesk event payload.
+ * Extract ticket-related placeholder fields.
  */
-function buildPlaceholderData(payload, companyName, language) {
-  const ticket = payload.data?.ticket || {};
-  const requester = payload.data?.requester || {};
-
+function extractTicketFields(ticket, language) {
   return {
     ticket_id: ticket.id || '',
     ticket_subject: ticket.subject || '',
     ticket_status: resolveStatusLabel(ticket.status, language),
     ticket_priority: resolvePriorityLabel(ticket.priority, language),
+    agent_name: ticket.responder_name || '',
+    group_name: ticket.group_name || ''
+  };
+}
+
+/**
+ * Extract requester-related placeholder fields.
+ */
+function extractRequesterFields(requester) {
+  return {
     requester_name: requester.name || '',
     requester_phone: requester.phone || '',
-    requester_email: requester.email || '',
-    agent_name: ticket.responder_name || '',
-    group_name: ticket.group_name || '',
-    company_name: companyName || ''
+    requester_email: requester.email || ''
   };
+}
+
+/**
+ * Build placeholder data object from a Freshdesk event payload.
+ */
+function buildPlaceholderData(payload, companyName, language) {
+  var ticket = payload.data?.ticket || {};
+  var requester = payload.data?.requester || {};
+
+  return Object.assign(
+    {},
+    extractTicketFields(ticket, language),
+    extractRequesterFields(requester),
+    { company_name: companyName || '' }
+  );
 }
 
 // ======================================================================
@@ -485,21 +504,23 @@ function prepareRecipients(phones, coverage, debug) {
 }
 
 /**
- * Handle post-send: update balance cache, log result, update stats.
+ * Update the cached gateway balance after a successful send.
  */
-async function handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
-  const success = result.result === 'OK';
-
-  if (success && result['balance-after'] !== undefined) {
-    try {
-      gateway.balance = result['balance-after'];
-      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-    } catch (err) {
-      debugLog('Failed to update cached balance: ' + err.message, settings.debug);
-    }
+async function updateCachedBalance(result, gateway, debug) {
+  if (result['balance-after'] === undefined) return;
+  try {
+    gateway.balance = result['balance-after'];
+    await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+  } catch (err) {
+    debugLog('Failed to update cached balance: ' + err.message, debug);
   }
+}
 
-  await logSmsResult({
+/**
+ * Build a log entry object from send result details.
+ */
+function buildLogEntry(eventType, recipients, cleanedMessage, success, result, ticketId) {
+  return {
     event_type: eventType,
     recipient_phone: recipients.join(','),
     message_preview: cleanedMessage,
@@ -507,10 +528,13 @@ async function handleSendResult(result, gateway, settings, recipients, eventType
     api_response_code: result.code || result.result || '',
     ticket_id: ticketId || 0,
     msg_id: result['msg-id'] || ''
-  });
+  };
+}
 
-  await updateStats(success);
-
+/**
+ * Format a success or failure response from a send result.
+ */
+function formatSendResponse(success, result, recipients, eventType) {
   if (success) {
     log(`SMS sent: ${recipients.length} recipient(s), event=${eventType}, msg-id=${result['msg-id'] || 'n/a'}`);
     return { success: true, message: 'Sent successfully' };
@@ -520,42 +544,62 @@ async function handleSendResult(result, gateway, settings, recipients, eventType
 }
 
 /**
+ * Handle post-send: update balance cache, log result, update stats.
+ */
+async function handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
+  var success = result.result === 'OK';
+
+  if (success) {
+    await updateCachedBalance(result, gateway, settings.debug);
+  }
+
+  await logSmsResult(buildLogEntry(eventType, recipients, cleanedMessage, success, result, ticketId));
+  await updateStats(success);
+
+  return formatSendResponse(success, result, recipients, eventType);
+}
+
+/**
+ * Dispatch the actual send call (single batch or bulk).
+ */
+async function dispatchSend(credentials, recipients, cleanedMessage, settings) {
+  var testFlag = settings.test_mode ? '1' : '0';
+  var sender = settings.active_sender_id || 'KWT-SMS';
+  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
+
+  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
+    return sendBatch(credentials, recipients.join(','), cleanedMessage, sender, testFlag);
+  }
+  return bulkSend(credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
+}
+
+/**
  * Send SMS through the full guard chain.
  */
 async function send(params) {
-  const { credentials, phones, message, eventType, ticketId } = params;
+  var { credentials, phones, message, eventType, ticketId } = params;
 
-  const settingsGuard = await guardSettings();
+  var settingsGuard = await guardSettings();
   if (settingsGuard.error) return settingsGuard.error;
-  const settings = settingsGuard.settings;
+  var settings = settingsGuard.settings;
 
-  const gatewayGuard = await guardGateway();
+  var gatewayGuard = await guardGateway();
   if (gatewayGuard.error) return gatewayGuard.error;
-  const gateway = gatewayGuard.gateway;
+  var gateway = gatewayGuard.gateway;
 
-  const cleanedMessage = cleanMessage(message);
+  var cleanedMessage = cleanMessage(message);
   if (!cleanedMessage) {
     log('Send skipped: empty message after cleaning');
     return { success: false, message: 'Message is empty after cleaning' };
   }
 
-  const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
+  var recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
   if (recipients.length === 0) {
     log('Send skipped: no valid recipients after filtering');
     return { success: false, message: 'No valid recipients' };
   }
 
-  const testFlag = settings.test_mode ? '1' : '0';
-  const sender = settings.active_sender_id || 'KWT-SMS';
-  debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
-
-  let result;
-  if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
-    result = await sendBatch(credentials, recipients.join(','), cleanedMessage, sender, testFlag);
-  } else {
-    result = await bulkSend(credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
-  }
-
+  var result = await dispatchSend(credentials, recipients, cleanedMessage, settings);
   return handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
 }
 
@@ -689,16 +733,108 @@ async function sendStatusChanged(ctx, payload, changes, templates, settings, pla
   await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.STATUS_CHANGED, ticketId });
 }
 
+/**
+ * Determine whether a priority change represents an escalation.
+ * Escalation: old priority was MEDIUM or lower (numerically <=2) and new is HIGH or above (>=3).
+ * @returns {boolean}
+ */
+function isEscalation(changes) {
+  if (!changes.priority) return false;
+  var oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
+  var newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
+  if (!oldPriority) return false;
+  return oldPriority <= TICKET_PRIORITY.MEDIUM && newPriority >= TICKET_PRIORITY.HIGH;
+}
+
 async function sendEscalationAlert(ctx, changes, templates, settings, placeholders, ticketId) {
-  if (!changes.priority) return;
-  const oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
-  const newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
-  if (!oldPriority || oldPriority > TICKET_PRIORITY.MEDIUM || newPriority < TICKET_PRIORITY.HIGH) return;
-  const adminAlerts = await loadAdminAlerts();
+  if (!isEscalation(changes)) return;
+  var adminAlerts = await loadAdminAlerts();
   if (adminAlerts.phones.length === 0 || !adminAlerts.events.escalation) return;
-  const escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
+  var escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
   if (!escalMsg) return;
   await send({ ...ctx, phones: adminAlerts.phones, message: escalMsg, eventType: SMS_EVENT.ADMIN_ESCALATION, ticketId });
+}
+
+// ======================================================================
+// APP INSTALL HELPERS (reduce complexity of onAppInstallHandler)
+// ======================================================================
+
+/**
+ * Fetch balance, sender IDs, and coverage from the kwtSMS API.
+ * Returns a gateway data object ready for storage.
+ */
+async function fetchGatewayData(creds) {
+  var credBody = JSON.stringify(creds);
+
+  var balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
+  var balance = JSON.parse(balanceResp.response);
+
+  var senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
+  var senders = JSON.parse(senderResp.response);
+
+  var coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
+  var coverage = JSON.parse(coverageResp.response);
+
+  return {
+    balance: balance.available || 0,
+    senderids: senders.senderid || [],
+    coverage: coverage.coverage || [],
+    last_sync: new Date().toISOString()
+  };
+}
+
+/** Default SMS templates written on first install. */
+var INSTALL_DEFAULT_TEMPLATES = {
+  ticket_created: {
+    en: "Your support ticket #{{ticket_id}} has been created. Subject: {{ticket_subject}}. We'll get back to you soon. - {{company_name}}",
+    ar: "\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u062a\u0630\u0643\u0631\u0629 \u0627\u0644\u062f\u0639\u0645 \u0631\u0642\u0645 #{{ticket_id}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0633\u0646\u0639\u0648\u062f \u0625\u0644\u064a\u0643 \u0642\u0631\u064a\u0628\u0627. - {{company_name}}"
+  },
+  status_changed: {
+    en: "Your ticket #{{ticket_id}} status has been updated to: {{ticket_status}}. Subject: {{ticket_subject}}. - {{company_name}}",
+    ar: "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u062d\u0627\u0644\u0629 \u062a\u0630\u0643\u0631\u062a\u0643 \u0631\u0642\u0645 #{{ticket_id}} \u0625\u0644\u0649: {{ticket_status}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. - {{company_name}}"
+  },
+  agent_reply: {
+    en: "New reply on your ticket #{{ticket_id}} from {{agent_name}}. Subject: {{ticket_subject}}. Please check your email for details. - {{company_name}}",
+    ar: "\u0631\u062f \u062c\u062f\u064a\u062f \u0639\u0644\u0649 \u062a\u0630\u0643\u0631\u062a\u0643 \u0631\u0642\u0645 #{{ticket_id}} \u0645\u0646 {{agent_name}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u064a\u0631\u062c\u0649 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a. - {{company_name}}"
+  },
+  admin_new_ticket: {
+    en: "New ticket #{{ticket_id}} from {{requester_name}}. Subject: {{ticket_subject}}. Priority: {{ticket_priority}}.",
+    ar: "\u062a\u0630\u0643\u0631\u0629 \u062c\u062f\u064a\u062f\u0629 #{{ticket_id}} \u0645\u0646 {{requester_name}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629: {{ticket_priority}}."
+  },
+  admin_high_priority: {
+    en: "New HIGH PRIORITY ticket #{{ticket_id}} from {{requester_name}}. Subject: {{ticket_subject}}. Priority: {{ticket_priority}}.",
+    ar: "\u062a\u0630\u0643\u0631\u0629 \u062c\u062f\u064a\u062f\u0629 \u0639\u0627\u0644\u064a\u0629 \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629 #{{ticket_id}} \u0645\u0646 {{requester_name}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629: {{ticket_priority}}."
+  },
+  admin_escalation: {
+    en: "ALERT: Ticket #{{ticket_id}} escalated to {{ticket_priority}}. Subject: {{ticket_subject}}. Assigned to: {{agent_name}}.",
+    ar: "\u062a\u0646\u0628\u064a\u0647: \u062a\u0645 \u062a\u0635\u0639\u064a\u062f \u0627\u0644\u062a\u0630\u0643\u0631\u0629 #{{ticket_id}} \u0625\u0644\u0649 {{ticket_priority}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0645\u0633\u0646\u062f\u0629 \u0625\u0644\u0649: {{agent_name}}."
+  }
+};
+
+/**
+ * Initialize default data storage entries on install.
+ */
+async function initializeDefaultData() {
+  await $db.set(DS_KEYS.SETTINGS, { data: JSON.stringify(DEFAULT_SETTINGS) });
+  await $db.set(DS_KEYS.TEMPLATES, { data: JSON.stringify(INSTALL_DEFAULT_TEMPLATES) });
+  await $db.set(DS_KEYS.ADMIN_ALERTS, { data: JSON.stringify(DEFAULT_ADMIN_ALERTS) });
+  await $db.set(DS_KEYS.STATS, { data: JSON.stringify(DEFAULT_STATS) });
+}
+
+/**
+ * Register the daily sync cron job. Silently ignores if already exists.
+ */
+async function registerDailySync() {
+  try {
+    await $schedule.create({
+      name: 'kwtsms_daily_sync',
+      data: { type: 'daily_sync' },
+      schedule_at: new Date(Date.now() + 3600000).toISOString(),
+      repeat: { time_unit: 'days', frequency: 1 }
+    });
+  } catch (schedErr) {
+    log('Schedule already exists or failed: ' + (schedErr.message || 'ignored'));
+  }
 }
 
 // ======================================================================
@@ -747,31 +883,29 @@ exports = {
   },
 
   onConversationCreateHandler: async function(args) {
-    const { data: payload } = args;
-    const conversation = payload.conversation || {};
+    var payload = args.data;
+    var conversation = payload.conversation || {};
 
     // Only send on public agent replies (not private notes, not customer messages, not forwards)
-    if (conversation.incoming !== false) return;
-    if (conversation.private !== false) return;
+    if (conversation.incoming !== false || conversation.private !== false) return;
 
-    
-    const settings = await loadSettings();
+    var settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
-    const customerPhone = payload.requester?.phone;
+    var customerPhone = payload.requester?.phone;
     if (!customerPhone) return;
 
-    const credentials = await getCredentials(args);
-    const templates = await loadTemplates();
-    const companyName = await getCompanyName(args);
-    const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
-    const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
+    var credentials = await getCredentials(args);
+    var templates = await loadTemplates();
+    var companyName = await getCompanyName(args);
+    var placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
+    var message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
     if (!message) return;
 
     await send({
-      credentials,
+      credentials: credentials,
       phones: [customerPhone],
-      message,
+      message: message,
       eventType: SMS_EVENT.AGENT_REPLY,
       ticketId: payload.ticket?.id
     });
@@ -823,82 +957,14 @@ exports = {
   },
 
   onAppInstallHandler: async function(args) {
-    
-    
-    
-
     log('App installed. Initializing...');
 
     try {
-      const creds = getCredentials(args);
-      const credBody = JSON.stringify(creds);
-
-      const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
-      const balance = JSON.parse(balanceResp.response);
-
-      const senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
-      const senders = JSON.parse(senderResp.response);
-
-      const coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
-      const coverage = JSON.parse(coverageResp.response);
-
-      await $db.set(DS_KEYS.GATEWAY, {
-        data: JSON.stringify({
-          balance: balance.available || 0,
-          senderids: senders.senderid || [],
-          coverage: coverage.coverage || [],
-          last_sync: new Date().toISOString()
-        })
-      });
-
-      // Initialize settings (enabled=false for safety)
-      await $db.set(DS_KEYS.SETTINGS, { data: JSON.stringify(DEFAULT_SETTINGS) });
-
-      // Initialize default templates
-      const defaultTemplates = {
-        ticket_created: {
-          en: "Your support ticket #{{ticket_id}} has been created. Subject: {{ticket_subject}}. We'll get back to you soon. - {{company_name}}",
-          ar: "\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u062a\u0630\u0643\u0631\u0629 \u0627\u0644\u062f\u0639\u0645 \u0631\u0642\u0645 #{{ticket_id}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0633\u0646\u0639\u0648\u062f \u0625\u0644\u064a\u0643 \u0642\u0631\u064a\u0628\u0627. - {{company_name}}"
-        },
-        status_changed: {
-          en: "Your ticket #{{ticket_id}} status has been updated to: {{ticket_status}}. Subject: {{ticket_subject}}. - {{company_name}}",
-          ar: "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u062d\u0627\u0644\u0629 \u062a\u0630\u0643\u0631\u062a\u0643 \u0631\u0642\u0645 #{{ticket_id}} \u0625\u0644\u0649: {{ticket_status}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. - {{company_name}}"
-        },
-        agent_reply: {
-          en: "New reply on your ticket #{{ticket_id}} from {{agent_name}}. Subject: {{ticket_subject}}. Please check your email for details. - {{company_name}}",
-          ar: "\u0631\u062f \u062c\u062f\u064a\u062f \u0639\u0644\u0649 \u062a\u0630\u0643\u0631\u062a\u0643 \u0631\u0642\u0645 #{{ticket_id}} \u0645\u0646 {{agent_name}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u064a\u0631\u062c\u0649 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a. - {{company_name}}"
-        },
-        admin_new_ticket: {
-          en: "New ticket #{{ticket_id}} from {{requester_name}}. Subject: {{ticket_subject}}. Priority: {{ticket_priority}}.",
-          ar: "\u062a\u0630\u0643\u0631\u0629 \u062c\u062f\u064a\u062f\u0629 #{{ticket_id}} \u0645\u0646 {{requester_name}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629: {{ticket_priority}}."
-        },
-        admin_high_priority: {
-          en: "New HIGH PRIORITY ticket #{{ticket_id}} from {{requester_name}}. Subject: {{ticket_subject}}. Priority: {{ticket_priority}}.",
-          ar: "\u062a\u0630\u0643\u0631\u0629 \u062c\u062f\u064a\u062f\u0629 \u0639\u0627\u0644\u064a\u0629 \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629 #{{ticket_id}} \u0645\u0646 {{requester_name}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629: {{ticket_priority}}."
-        },
-        admin_escalation: {
-          en: "ALERT: Ticket #{{ticket_id}} escalated to {{ticket_priority}}. Subject: {{ticket_subject}}. Assigned to: {{agent_name}}.",
-          ar: "\u062a\u0646\u0628\u064a\u0647: \u062a\u0645 \u062a\u0635\u0639\u064a\u062f \u0627\u0644\u062a\u0630\u0643\u0631\u0629 #{{ticket_id}} \u0625\u0644\u0649 {{ticket_priority}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0645\u0633\u0646\u062f\u0629 \u0625\u0644\u0649: {{agent_name}}."
-        }
-      };
-      await $db.set(DS_KEYS.TEMPLATES, { data: JSON.stringify(defaultTemplates) });
-
-      // Initialize admin alerts and stats
-      await $db.set(DS_KEYS.ADMIN_ALERTS, { data: JSON.stringify(DEFAULT_ADMIN_ALERTS) });
-      await $db.set(DS_KEYS.STATS, { data: JSON.stringify(DEFAULT_STATS) });
-
-      // Register daily cron sync (ignore if already exists from previous install)
-      try {
-        await $schedule.create({
-          name: 'kwtsms_daily_sync',
-          data: { type: 'daily_sync' },
-          schedule_at: new Date(Date.now() + 3600000).toISOString(),
-          repeat: { time_unit: 'days', frequency: 1 }
-        });
-      } catch (schedErr) {
-        log('Schedule already exists or failed: ' + (schedErr.message || 'ignored'));
-      }
-
+      var creds = getCredentials(args);
+      var gateway = await fetchGatewayData(creds);
+      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+      await initializeDefaultData();
+      await registerDailySync();
       log('App initialization complete.');
     } catch (err) {
       console.error('[kwtsms] App install initialization failed:', err.message || JSON.stringify(err));

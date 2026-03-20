@@ -65,68 +65,69 @@
     }
   }
 
+  /**
+   * Render balance and status dot from gateway data.
+   */
+  function renderBalance() {
+    state.client.db.get('kwtsms_gateway').then(function(data) {
+      var gateway = JSON.parse(data.kwtsms_gateway);
+      var balanceEl = document.getElementById('sidebar-balance');
+      balanceEl.textContent = (gateway.balance || 0) + ' cr';
+
+      var statusDot = document.getElementById('status-dot');
+      statusDot.className = gateway.balance > 0 ? 'dot-green' : 'dot-red';
+
+      if (!gateway.balance || gateway.balance <= 0) {
+        document.getElementById('btn-send').disabled = true;
+        document.getElementById('btn-send').textContent = 'Insufficient balance';
+      }
+    }).catch(function() { /* gateway data may not exist yet */ });
+  }
+
+  /**
+   * Validate and render the phone validation badge.
+   */
+  function renderPhoneValidation() {
+    var validEl = document.getElementById('phone-valid');
+    var stripped = state.contactPhone ? state.contactPhone.replace(/[\s\-()]/g, '') : '';
+    var isValid = state.contactPhone && /^\+?\d{7,15}$/.test(stripped);
+
+    if (isValid) {
+      validEl.textContent = 'Valid';
+      validEl.className = 'validation-badge valid';
+      return;
+    }
+    validEl.textContent = state.contactPhone ? 'Invalid' : 'Missing';
+    validEl.className = 'validation-badge invalid';
+    document.getElementById('btn-send').disabled = true;
+    if (!state.contactPhone) {
+      document.getElementById('no-phone-msg').classList.remove('hidden');
+    }
+  }
+
   function renderSidebar() {
-    // Check if gateway is disabled
     if (!state.settings || !state.settings.enabled) {
       document.getElementById('sidebar-content').classList.add('hidden');
       document.getElementById('sidebar-disabled').classList.remove('hidden');
       return;
     }
 
-    // Show test mode banner
     if (state.settings.test_mode) {
       document.getElementById('test-mode-banner').classList.remove('hidden');
     }
 
-    // Show balance
-    state.client.db.get('kwtsms_gateway').then(function(data) {
-      const gateway = JSON.parse(data.kwtsms_gateway);
-      const balanceEl = document.getElementById('sidebar-balance');
-      balanceEl.textContent = (gateway.balance || 0) + ' cr';
+    renderBalance();
 
-      const statusDot = document.getElementById('status-dot');
-      statusDot.className = gateway.balance > 0 ? 'dot-green' : 'dot-red';
+    document.getElementById('recipient-name').textContent = state.contactName || 'Unknown';
+    document.getElementById('recipient-phone').textContent = state.contactPhone || 'No phone number';
 
-      // Disable send if zero balance
-      if (!gateway.balance || gateway.balance <= 0) {
-        document.getElementById('btn-send').disabled = true;
-        document.getElementById('btn-send').textContent = 'Insufficient balance';
-      }
-    }).catch(function() { /* gateway data may not exist yet */ });
-
-    // Fill recipient
-    const nameEl = document.getElementById('recipient-name');
-    const phoneEl = document.getElementById('recipient-phone');
-    nameEl.textContent = state.contactName || 'Unknown';
-    phoneEl.textContent = state.contactPhone || 'No phone number';
-
-    // Validate phone
-    const validEl = document.getElementById('phone-valid');
-    if (state.contactPhone && /^\+?\d{7,15}$/.test(state.contactPhone.replace(/[\s\-()]/g, ''))) {
-      validEl.textContent = 'Valid';
-      validEl.className = 'validation-badge valid';
-    } else if (state.contactPhone) {
-      validEl.textContent = 'Invalid';
-      validEl.className = 'validation-badge invalid';
-      document.getElementById('btn-send').disabled = true;
-    } else {
-      validEl.textContent = 'Missing';
-      validEl.className = 'validation-badge invalid';
-      document.getElementById('btn-send').disabled = true;
-      document.getElementById('no-phone-msg').classList.remove('hidden');
-    }
-
-    // Populate template dropdown
+    renderPhoneValidation();
     populateTemplates();
-
-    // Load SMS history for this contact
     loadHistory();
 
-    // Set up character counter
-    const textarea = document.getElementById('sms-message');
+    var textarea = document.getElementById('sms-message');
     textarea.addEventListener('input', updateCharCount);
 
-    // Set initial language
     state.currentLang = (state.settings && state.settings.language) || 'en';
     updateLangButtons();
   }

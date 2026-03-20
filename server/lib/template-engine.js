@@ -30,27 +30,44 @@ function resolveTemplate(templates, eventType, language, data) {
 }
 
 /**
- * Build placeholder data object from a Freshdesk event payload.
+ * Extract ticket-related placeholder fields.
  */
-function buildPlaceholderData(payload, companyName, language) {
+function extractTicketFields(ticket, language) {
   const { STATUS_LABELS, PRIORITY_LABELS } = require('./constants');
-  const ticket = payload.data?.ticket || {};
-  const requester = payload.data?.requester || {};
-  const statusCode = ticket.status;
-  const priorityCode = ticket.priority;
-
   return {
     ticket_id: ticket.id || '',
     ticket_subject: ticket.subject || '',
-    ticket_status: (STATUS_LABELS[language] || STATUS_LABELS.en)[statusCode] || '',
-    ticket_priority: (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[priorityCode] || '',
+    ticket_status: (STATUS_LABELS[language] || STATUS_LABELS.en)[ticket.status] || '',
+    ticket_priority: (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[ticket.priority] || '',
+    agent_name: ticket.responder_name || '',
+    group_name: ticket.group_name || ''
+  };
+}
+
+/**
+ * Extract requester-related placeholder fields.
+ */
+function extractRequesterFields(requester) {
+  return {
     requester_name: requester.name || '',
     requester_phone: requester.phone || '',
-    requester_email: requester.email || '',
-    agent_name: ticket.responder_name || '',
-    group_name: ticket.group_name || '',
-    company_name: companyName || ''
+    requester_email: requester.email || ''
   };
+}
+
+/**
+ * Build placeholder data object from a Freshdesk event payload.
+ */
+function buildPlaceholderData(payload, companyName, language) {
+  const ticket = payload.data?.ticket || {};
+  const requester = payload.data?.requester || {};
+
+  return Object.assign(
+    {},
+    extractTicketFields(ticket, language),
+    extractRequesterFields(requester),
+    { company_name: companyName || '' }
+  );
 }
 
 module.exports = { replacePlaceholders, resolveTemplate, buildPlaceholderData };
