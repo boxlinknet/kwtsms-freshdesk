@@ -619,9 +619,8 @@ function sleep(ms) {
 // HELPERS: Credentials, Settings, Templates, Admin Alerts, Company Name
 // ======================================================================
 
-async function getCredentials(args) {
-  const iparams = await args.iparams.get('kwtsms_username', 'kwtsms_password');
-  return { username: iparams.kwtsms_username, password: iparams.kwtsms_password };
+function getCredentials(args) {
+  return { username: args.iparams.kwtsms_username, password: args.iparams.kwtsms_password };
 }
 
 async function loadSettings($db) {
@@ -645,11 +644,8 @@ async function loadAdminAlerts($db) {
   } catch (e) { return DEFAULT_ADMIN_ALERTS; }
 }
 
-async function getCompanyName(args) {
-  try {
-    const iparams = await args.iparams.get('kwtsms_company_name');
-    return iparams.kwtsms_company_name || '';
-  } catch (e) { return ''; }
+function getCompanyName(args) {
+  return (args.iparams && args.iparams.kwtsms_company_name) || '';
 }
 
 // ======================================================================
@@ -905,7 +901,7 @@ exports = {
       console.error('[kwtsms] App install initialization failed:', err.message);
     }
 
-    return { status: 200 };
+    renderData();
   },
 
   onAppUninstallHandler: async function(args) {
@@ -926,7 +922,7 @@ exports = {
       console.error('[kwtsms] Cleanup failed:', err.message);
     }
 
-    return { status: 200 };
+    renderData();
   },
 
   manualSendSms: async function(args) {
