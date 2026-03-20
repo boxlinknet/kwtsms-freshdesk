@@ -1,0 +1,43 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - img "freshworks-developer" [ref=e4]
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: kwtsms_freshdesk
+        - link "Documentation external-link" [ref=e10] [cursor=pointer]:
+          - /url: https://developers.freshworks.com/docs/
+          - text: Documentation
+          - img "external-link" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e14]: List of events or actions used in the app are listed below. Select one to simulate.
+        - link "onAppInstall" [ref=e35] [cursor=pointer]:
+          - /url: "#"
+        - separator [ref=e21]
+        - generic [ref=e39]:
+          - generic [ref=e41]:
+            - generic [ref=e45]: "1"
+            - generic [ref=e47]: "2"
+            - generic [ref=e49]: "3"
+            - generic [ref=e51]: "4"
+            - generic [ref=e53]: "5"
+            - generic [ref=e55]: "6"
+            - generic [ref=e57]: "7"
+          - generic [ref=e74]:
+            - generic [ref=e76]: "{"
+            - generic [ref=e78]: "\"timestamp\": 1496400354326,"
+            - generic [ref=e80]: "\"account_id\": \"13\","
+            - generic [ref=e82]: "\"domain\": \"https://sample.freshdesk.com\","
+            - generic [ref=e84]: "\"event\": \"onAppInstall\","
+            - generic [ref=e86]: "\"region\": \"US\""
+            - generic [ref=e88]: "}"
+          - textbox "Editor content;Press Alt+F1 for Accessibility Options." [ref=e92]: "{ \"timestamp\": 1496400354326, \"account_id\": \"13\", \"domain\": \"https://sample.freshdesk.com\", \"event\": \"onAppInstall\", \"region\": \"US\" }"
+        - generic [ref=e97]:
+          - button "Reset" [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic: Reset
+          - button "Simulate" [disabled] [ref=e102]:
+            - generic [ref=e103]:
+              - generic: Simulate
+  - generic:
+    - alert
+    - status

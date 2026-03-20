@@ -57,7 +57,7 @@ const SMS_EVENT = {
 
 // Default settings (written on app install)
 const DEFAULT_SETTINGS = {
-  enabled: true,
+  enabled: false,
   test_mode: true,
   debug: false,
   language: 'en',

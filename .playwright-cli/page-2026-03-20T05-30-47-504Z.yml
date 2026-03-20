@@ -1,0 +1,65 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - img "freshworks-developer" [ref=e4]
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: kwtsms_freshdesk
+        - link "Documentation external-link" [ref=e10] [cursor=pointer]:
+          - /url: https://developers.freshworks.com/docs/
+          - text: Documentation
+          - img "external-link" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e14]: List of events or actions used in the app are listed below. Select one to simulate.
+        - link "onTicketCreate" [ref=e107] [cursor=pointer]:
+          - /url: "#"
+        - separator [ref=e21]
+        - generic [ref=e39]:
+          - generic [ref=e41]:
+            - generic [ref=e111]: "1"
+            - generic [ref=e113]: "2"
+            - generic [ref=e116]: "3"
+            - generic [ref=e119]: "4"
+            - generic [ref=e121]: "5"
+            - generic [ref=e123]: "6"
+            - generic [ref=e125]: "7"
+            - generic [ref=e127]: "8"
+            - generic [ref=e130]: "9"
+            - generic [ref=e132]: "10"
+            - generic [ref=e134]: "11"
+            - generic [ref=e136]: "12"
+            - generic [ref=e138]: "13"
+            - generic [ref=e140]: "14"
+            - generic [ref=e142]: "15"
+            - generic [ref=e144]: "16"
+            - generic [ref=e146]: "17"
+            - generic [ref=e148]: "18"
+          - generic [ref=e74]:
+            - generic [ref=e209]: "{"
+            - generic [ref=e211]: "\"region\": \"US\","
+            - generic [ref=e213]: "\"data\": {"
+            - generic [ref=e215]: "\"requester\": {"
+            - generic [ref=e217]: "\"name\": \"Test User\","
+            - generic [ref=e219]: "\"phone\": \"96598765432\","
+            - generic [ref=e221]: "\"email\": \"test@example.com\""
+            - generic [ref=e223]: "},"
+            - generic [ref=e225]: "\"ticket\": {"
+            - generic [ref=e227]: "\"id\": 1042,"
+            - generic [ref=e229]: "\"subject\": \"Test ticket for SMS\","
+            - generic [ref=e231]: "\"priority\": 3,"
+            - generic [ref=e233]: "\"status\": 2,"
+            - generic [ref=e235]: "\"responder_name\": \"Agent Smith\","
+            - generic [ref=e237]: "\"group_name\": \"Support\""
+            - generic [ref=e239]: "}"
+            - generic [ref=e241]: "}"
+            - generic [ref=e243]: "}"
+          - textbox "Editor content;Press Alt+F1 for Accessibility Options." [ref=e92]: "{ \"region\": \"US\", \"data\": { \"requester\": { \"name\": \"Test User\", \"phone\": \"96598765432\", \"email\": \"test@example.com\" }, \"ticket\": { \"id\": 1042,"
+        - generic [ref=e97]:
+          - button "Reset" [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic: Reset
+          - button "Simulate" [ref=e106] [cursor=pointer]:
+            - generic [ref=e103]:
+              - generic: Simulate
+  - generic:
+    - alert
+    - status

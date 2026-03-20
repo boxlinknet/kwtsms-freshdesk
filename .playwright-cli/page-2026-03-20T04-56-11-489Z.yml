@@ -1,0 +1,97 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - img "freshworks-developer" [ref=e4]
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: kwtsms_freshdesk
+        - link "Documentation external-link" [ref=e10] [cursor=pointer]:
+          - /url: https://developers.freshworks.com/docs/
+          - text: Documentation
+          - img "external-link" [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e14]: List of events or actions used in the app are listed below. Select one to simulate.
+        - link "onTicketCreate" [ref=e35] [cursor=pointer]:
+          - /url: "#"
+        - separator [ref=e21]
+        - generic [ref=e39]:
+          - generic [ref=e41]:
+            - generic [ref=e45]: "1"
+            - generic [ref=e47]: "2"
+            - generic [ref=e50]: "3"
+            - generic [ref=e53]: "4"
+            - generic [ref=e55]: "5"
+            - generic [ref=e57]: "6"
+            - generic [ref=e59]: "7"
+            - generic [ref=e61]: "8"
+            - generic [ref=e63]: "9"
+            - generic [ref=e65]: "10"
+            - generic [ref=e67]: "11"
+            - generic [ref=e69]: "12"
+            - generic [ref=e71]: "13"
+            - generic [ref=e73]: "14"
+            - generic [ref=e75]: "15"
+            - generic [ref=e78]: "16"
+            - generic [ref=e80]: "17"
+            - generic [ref=e82]: "18"
+            - generic [ref=e84]: "19"
+            - generic [ref=e87]: "20"
+            - generic [ref=e89]: "21"
+            - generic [ref=e91]: "22"
+            - generic [ref=e93]: "23"
+            - generic [ref=e95]: "24"
+            - generic [ref=e97]: "25"
+            - generic [ref=e99]: "26"
+            - generic [ref=e101]: "27"
+            - generic [ref=e103]: "28"
+            - generic [ref=e105]: "29"
+            - generic [ref=e107]: "30"
+            - generic [ref=e109]: "31"
+            - generic [ref=e111]: "32"
+            - generic [ref=e113]: "33"
+            - generic [ref=e115]: "34"
+          - generic [ref=e251]:
+            - generic [ref=e253]: "{"
+            - generic [ref=e255]: "\"region\": \"US\","
+            - generic [ref=e257]: "\"data\": {"
+            - generic [ref=e259]: "\"ticket\": {"
+            - generic [ref=e261]: "\"model_id\": 28939101,"
+            - generic [ref=e263]: "\"subject\": \"Support Needed...\","
+            - generic [ref=e265]: "\"description\": \"<div style=\\\"font-family:-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif; font-size:14px\\\"><div dir=\\\"ltr\\\">adsf</div></div>\","
+            - generic [ref=e267]: "\"is_description_truncated\": false,"
+            - generic [ref=e269]: "\"description_text\": \"Some details on the issue ...\","
+            - generic [ref=e271]: "\"is_description_text_truncated\": false,"
+            - generic [ref=e273]: "\"due_by\": \"2021-11-10T13:45:13Z\","
+            - generic [ref=e275]: "\"first_response_by_bhrs\": null,"
+            - generic [ref=e277]: "\"fr_due_by\": \"2021-11-08T13:45:13Z\","
+            - generic [ref=e279]: "\"fr_escalated\": false,"
+            - generic [ref=e281]: "\"is_escalated\": false,"
+            - generic [ref=e283]: "\"fwd_emails\": ["
+            - generic [ref=e285]: "\"ram@freshdesk.com\","
+            - generic [ref=e287]: "\"diana@freshdesk.com\""
+            - generic [ref=e289]: "],"
+            - generic [ref=e291]: "\"reply_cc_emails\": ["
+            - generic [ref=e293]: "\"ram@freshdesk.com\","
+            - generic [ref=e295]: "\"diana@freshdesk.com\""
+            - generic [ref=e297]: "],"
+            - generic [ref=e299]: "\"email_config_id\": null,"
+            - generic [ref=e301]: "\"id\": 165,"
+            - generic [ref=e303]: "\"group_id\": null,"
+            - generic [ref=e305]: "\"product_id\": null,"
+            - generic [ref=e307]: "\"company_id\": null,"
+            - generic [ref=e309]: "\"requester_id\": 48014615863,"
+            - generic [ref=e311]: "\"responder_id\": 48,"
+            - generic [ref=e313]: "\"status\": 2,"
+            - generic [ref=e315]: "\"priority\": 1,"
+            - generic [ref=e317]: "\"type\": null,"
+            - generic [ref=e319]: "\"tags\": [],"
+          - textbox "Editor content;Press Alt+F1 for Accessibility Options." [ref=e321]: "{ \"region\": \"US\", \"data\": { \"ticket\": { \"model_id\": 28939101, \"subject\": \"Support Needed...\", \"description\": \"<div style=\\\"font-family:-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif; font-size:14px\\\"><div dir=\\\"ltr\\\">adsf</div></div>\", \"is_description_truncated\": false, \"description_text\": \"Some details on the issue ...\", \"is_description_text_truncated\": false,"
+        - generic [ref=e327]:
+          - button "Reset" [ref=e329] [cursor=pointer]:
+            - generic [ref=e330]:
+              - generic: Reset
+          - button "Simulate" [ref=e332] [cursor=pointer]:
+            - generic [ref=e333]:
+              - generic: Simulate
+  - generic:
+    - alert
+    - status
