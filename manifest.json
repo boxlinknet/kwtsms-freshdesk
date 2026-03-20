@@ -47,5 +47,8 @@
   "engines": {
     "node": "18.20.8",
     "fdk": "9.8.2"
-  }
+  },
+  "whitelisted-domains": [
+    "https://www.kwtsms.com"
+  ]
 }
