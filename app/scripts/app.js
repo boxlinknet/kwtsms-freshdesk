@@ -145,7 +145,7 @@
    * Map of tab IDs to their data-loading functions.
    * @type {Object<string, Function>}
    */
-  var TAB_LOADERS = {
+  const TAB_LOADERS = {
     'dashboard': function () { loadDashboard(); },
     'settings': function () { loadSettings(); },
     'templates': function () { loadTemplates(); },
@@ -158,10 +158,10 @@
    * @param {string} tabId - Active tab identifier
    */
   function updateTabButtons(tabId) {
-    var tabButtons = document.querySelectorAll('.tab-btn');
-    for (var i = 0; i < tabButtons.length; i++) {
-      var btn = tabButtons[i];
-      var isActive = btn.getAttribute('data-tab') === tabId;
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    for (let i = 0; i < tabButtons.length; i++) {
+      const btn = tabButtons[i];
+      const isActive = btn.getAttribute('data-tab') === tabId;
       btn.classList.toggle('active', isActive);
       btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     }
@@ -172,8 +172,8 @@
    * @param {string} tabId - Active tab identifier
    */
   function updateTabPanels(tabId) {
-    var panels = document.querySelectorAll('.tab-panel');
-    for (var j = 0; j < panels.length; j++) {
+    const panels = document.querySelectorAll('.tab-panel');
+    for (let j = 0; j < panels.length; j++) {
       panels[j].classList.toggle('active', panels[j].id === 'tab-' + tabId);
     }
   }
@@ -187,7 +187,7 @@
     updateTabPanels(tabId);
 
     // Load data for the activated tab
-    var loader = TAB_LOADERS[tabId];
+    const loader = TAB_LOADERS[tabId];
     if (loader) { loader(); }
   }
 
@@ -468,7 +468,7 @@
    * @param {Object|null} gw - Gateway data
    */
   function renderGatewayConnection(gw) {
-    var connected = gw && gw.last_sync;
+    const connected = gw && gw.last_sync;
     setStatusDot('gw-connected-dot', connected ? 'on' : 'off');
     setText('gw-connected-text', connected ? 'Connected' : 'Disconnected');
   }
@@ -477,11 +477,11 @@
    * Render gateway toggle status indicators from current settings.
    */
   function renderGatewayToggles() {
-    var enabled = state.currentSettings.enabled;
+    const enabled = state.currentSettings.enabled;
     setStatusDot('gw-enabled-dot', enabled ? 'on' : 'off');
     setText('gw-enabled-text', enabled ? 'Enabled' : 'Disabled');
 
-    var testMode = state.currentSettings.test_mode;
+    const testMode = state.currentSettings.test_mode;
     setStatusDot('gw-testmode-dot', testMode ? 'warn' : 'on');
     setText('gw-testmode-text', testMode ? 'Test Mode: ON' : 'Test Mode: OFF');
 
@@ -540,34 +540,34 @@
    * @returns {HTMLTableRowElement}
    */
   function buildActivityRow(rec) {
-    var tr = document.createElement('tr');
+    const tr = document.createElement('tr');
 
-    var tdTime = document.createElement('td');
+    const tdTime = document.createElement('td');
     tdTime.textContent = formatDate(rec.timestamp);
     tr.appendChild(tdTime);
 
-    var tdEvent = document.createElement('td');
-    var badge = document.createElement('span');
+    const tdEvent = document.createElement('td');
+    const badge = document.createElement('span');
     badge.className = 'badge badge-event';
     badge.textContent = formatEventLabel(rec.event_type);
     tdEvent.appendChild(badge);
     tr.appendChild(tdEvent);
 
-    var tdRecip = document.createElement('td');
+    const tdRecip = document.createElement('td');
     tdRecip.textContent = rec.recipient_phone || '--';
     tr.appendChild(tdRecip);
 
-    var tdMsg = document.createElement('td');
-    var msgSpan = document.createElement('span');
+    const tdMsg = document.createElement('td');
+    const msgSpan = document.createElement('span');
     msgSpan.className = 'text-truncate';
     msgSpan.textContent = truncate(rec.message_preview, 50);
     msgSpan.title = rec.message_preview || '';
     tdMsg.appendChild(msgSpan);
     tr.appendChild(tdMsg);
 
-    var tdStatus = document.createElement('td');
-    var statusBadge = document.createElement('span');
-    var isSent = rec.status === 'sent';
+    const tdStatus = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    const isSent = rec.status === 'sent';
     statusBadge.className = 'badge ' + (isSent ? 'badge-sent' : 'badge-failed');
     statusBadge.textContent = isSent ? 'Sent' : 'Failed';
     tdStatus.appendChild(statusBadge);
@@ -582,9 +582,9 @@
    * @param {string} emptyMsg - Message when no records
    */
   function renderEmptyRow(tbody, emptyMsg) {
-    var emptyTr = document.createElement('tr');
+    const emptyTr = document.createElement('tr');
     emptyTr.className = 'empty-row';
-    var emptyTd = document.createElement('td');
+    const emptyTd = document.createElement('td');
     emptyTd.setAttribute('colspan', '5');
     emptyTd.textContent = emptyMsg;
     emptyTr.appendChild(emptyTd);
@@ -598,7 +598,7 @@
    * @param {string} emptyMsg - Message when no records
    */
   function renderActivityTable(tbodyId, records, emptyMsg) {
-    var tbody = document.getElementById(tbodyId);
+    const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
     while (tbody.firstChild) {
@@ -610,8 +610,8 @@
       return;
     }
 
-    for (var i = 0; i < records.length; i++) {
-      var rec = records[i].data || records[i];
+    for (let i = 0; i < records.length; i++) {
+      const rec = records[i].data || records[i];
       tbody.appendChild(buildActivityRow(rec));
     }
   }
@@ -801,12 +801,12 @@
    * @returns {{ phone: string, message: string }|null}
    */
   function validateTestSmsInputs() {
-    var phoneInput = document.getElementById('test-phone');
-    var msgInput = document.getElementById('test-message');
+    const phoneInput = document.getElementById('test-phone');
+    const msgInput = document.getElementById('test-message');
     if (!phoneInput || !msgInput) return null;
 
-    var phone = phoneInput.value.trim();
-    var message = msgInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const message = msgInput.value.trim();
 
     if (!phone) {
       showToast('Please enter a phone number', 'warning');
@@ -824,8 +824,8 @@
    * @param {Object} result - Invoke result
    */
   function handleTestSmsResult(result) {
-    var phoneInput = document.getElementById('test-phone');
-    var msgInput = document.getElementById('test-message');
+    const phoneInput = document.getElementById('test-phone');
+    const msgInput = document.getElementById('test-message');
     if (result && result.response && result.response.success !== false) {
       showToast('Test SMS sent successfully', 'success');
       hideModal('modal-test-sms');
@@ -840,10 +840,10 @@
    * Handle Send Test SMS from modal.
    */
   function handleSendTestSms() {
-    var inputs = validateTestSmsInputs();
+    const inputs = validateTestSmsInputs();
     if (!inputs) return;
 
-    var sendBtn = document.getElementById('modal-test-send');
+    const sendBtn = document.getElementById('modal-test-send');
     if (sendBtn) sendBtn.disabled = true;
 
     if (state.client && state.client.request && state.client.request.invoke) {
@@ -1199,15 +1199,15 @@
    * @returns {HTMLLIElement}
    */
   function buildPhoneListItem(phone) {
-    var li = document.createElement('li');
+    const li = document.createElement('li');
     li.className = 'phone-item';
 
-    var numSpan = document.createElement('span');
+    const numSpan = document.createElement('span');
     numSpan.className = 'phone-number';
     numSpan.textContent = phone;
     li.appendChild(numSpan);
 
-    var removeBtn = document.createElement('button');
+    const removeBtn = document.createElement('button');
     removeBtn.className = 'phone-remove';
     removeBtn.textContent = 'Remove';
     removeBtn.setAttribute('data-phone', phone);
@@ -1218,24 +1218,34 @@
   }
 
   /**
+   * Get the current alert phone list from state (or empty array).
+   * @returns {string[]}
+   */
+  function getAlertPhones() {
+    return (state.currentAdminAlerts && state.currentAdminAlerts.phones) || [];
+  }
+
+  /**
    * Render the phone list for admin alerts.
    */
   function renderAlertPhones() {
-    var list = document.getElementById('alert-phone-list');
-    var emptyMsg = document.getElementById('alert-phones-empty');
+    const list = document.getElementById('alert-phone-list');
+    const emptyMsg = document.getElementById('alert-phones-empty');
     if (!list) return;
 
     while (list.firstChild) {
       list.removeChild(list.firstChild);
     }
 
-    var phones = (state.currentAdminAlerts && state.currentAdminAlerts.phones) || [];
+    const phones = getAlertPhones();
 
-    if (emptyMsg) {
-      emptyMsg.style.display = phones.length === 0 ? 'block' : 'none';
+    if (phones.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      return;
     }
 
-    for (var i = 0; i < phones.length; i++) {
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    for (let i = 0; i < phones.length; i++) {
       list.appendChild(buildPhoneListItem(phones[i]));
     }
   }

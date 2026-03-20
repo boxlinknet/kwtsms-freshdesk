@@ -340,8 +340,8 @@ function extractRequesterFields(requester) {
  * Build placeholder data object from a Freshdesk event payload.
  */
 function buildPlaceholderData(payload, companyName, language) {
-  var ticket = payload.data?.ticket || {};
-  var requester = payload.data?.requester || {};
+  const ticket = payload.data?.ticket || {};
+  const requester = payload.data?.requester || {};
 
   return Object.assign(
     {},
@@ -532,6 +532,13 @@ function buildLogEntry(eventType, recipients, cleanedMessage, success, result, t
 }
 
 /**
+ * Build the failure message string from an API result.
+ */
+function buildFailureMessage(result) {
+  return `Send failed: ${result.description || result.code || 'Unknown error'}`;
+}
+
+/**
  * Format a success or failure response from a send result.
  */
 function formatSendResponse(success, result, recipients, eventType) {
@@ -540,14 +547,14 @@ function formatSendResponse(success, result, recipients, eventType) {
     return { success: true, message: 'Sent successfully' };
   }
   log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
-  return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
+  return { success: false, message: buildFailureMessage(result) };
 }
 
 /**
  * Handle post-send: update balance cache, log result, update stats.
  */
 async function handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage) {
-  var success = result.result === 'OK';
+  const success = result.result === 'OK';
 
   if (success) {
     await updateCachedBalance(result, gateway, settings.debug);
@@ -562,9 +569,9 @@ async function handleSendResult(result, gateway, settings, recipients, eventType
 /**
  * Dispatch the actual send call (single batch or bulk).
  */
-async function dispatchSend(credentials, recipients, cleanedMessage, settings) {
-  var testFlag = settings.test_mode ? '1' : '0';
-  var sender = settings.active_sender_id || 'KWT-SMS';
+function dispatchSend(credentials, recipients, cleanedMessage, settings) {
+  const testFlag = settings.test_mode ? '1' : '0';
+  const sender = settings.active_sender_id || 'KWT-SMS';
   debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
 
   if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
@@ -577,29 +584,29 @@ async function dispatchSend(credentials, recipients, cleanedMessage, settings) {
  * Send SMS through the full guard chain.
  */
 async function send(params) {
-  var { credentials, phones, message, eventType, ticketId } = params;
+  const { credentials, phones, message, eventType, ticketId } = params;
 
-  var settingsGuard = await guardSettings();
+  const settingsGuard = await guardSettings();
   if (settingsGuard.error) return settingsGuard.error;
-  var settings = settingsGuard.settings;
+  const settings = settingsGuard.settings;
 
-  var gatewayGuard = await guardGateway();
+  const gatewayGuard = await guardGateway();
   if (gatewayGuard.error) return gatewayGuard.error;
-  var gateway = gatewayGuard.gateway;
+  const gateway = gatewayGuard.gateway;
 
-  var cleanedMessage = cleanMessage(message);
+  const cleanedMessage = cleanMessage(message);
   if (!cleanedMessage) {
     log('Send skipped: empty message after cleaning');
     return { success: false, message: 'Message is empty after cleaning' };
   }
 
-  var recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
+  const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
   if (recipients.length === 0) {
     log('Send skipped: no valid recipients after filtering');
     return { success: false, message: 'No valid recipients' };
   }
 
-  var result = await dispatchSend(credentials, recipients, cleanedMessage, settings);
+  const result = await dispatchSend(credentials, recipients, cleanedMessage, settings);
   return handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
 }
 
@@ -740,17 +747,17 @@ async function sendStatusChanged(ctx, payload, changes, templates, settings, pla
  */
 function isEscalation(changes) {
   if (!changes.priority) return false;
-  var oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
-  var newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
+  const oldPriority = Array.isArray(changes.priority) ? changes.priority[0] : null;
+  const newPriority = Array.isArray(changes.priority) ? changes.priority[1] : changes.priority;
   if (!oldPriority) return false;
   return oldPriority <= TICKET_PRIORITY.MEDIUM && newPriority >= TICKET_PRIORITY.HIGH;
 }
 
 async function sendEscalationAlert(ctx, changes, templates, settings, placeholders, ticketId) {
   if (!isEscalation(changes)) return;
-  var adminAlerts = await loadAdminAlerts();
+  const adminAlerts = await loadAdminAlerts();
   if (adminAlerts.phones.length === 0 || !adminAlerts.events.escalation) return;
-  var escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
+  const escalMsg = resolveTemplate(templates, SMS_EVENT.ADMIN_ESCALATION, settings.language, placeholders);
   if (!escalMsg) return;
   await send({ ...ctx, phones: adminAlerts.phones, message: escalMsg, eventType: SMS_EVENT.ADMIN_ESCALATION, ticketId });
 }
@@ -764,16 +771,16 @@ async function sendEscalationAlert(ctx, changes, templates, settings, placeholde
  * Returns a gateway data object ready for storage.
  */
 async function fetchGatewayData(creds) {
-  var credBody = JSON.stringify(creds);
+  const credBody = JSON.stringify(creds);
 
-  var balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
-  var balance = JSON.parse(balanceResp.response);
+  const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
+  const balance = JSON.parse(balanceResp.response);
 
-  var senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
-  var senders = JSON.parse(senderResp.response);
+  const senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
+  const senders = JSON.parse(senderResp.response);
 
-  var coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
-  var coverage = JSON.parse(coverageResp.response);
+  const coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
+  const coverage = JSON.parse(coverageResp.response);
 
   return {
     balance: balance.available || 0,
@@ -784,7 +791,7 @@ async function fetchGatewayData(creds) {
 }
 
 /** Default SMS templates written on first install. */
-var INSTALL_DEFAULT_TEMPLATES = {
+const INSTALL_DEFAULT_TEMPLATES = {
   ticket_created: {
     en: "Your support ticket #{{ticket_id}} has been created. Subject: {{ticket_subject}}. We'll get back to you soon. - {{company_name}}",
     ar: "\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u062a\u0630\u0643\u0631\u0629 \u0627\u0644\u062f\u0639\u0645 \u0631\u0642\u0645 #{{ticket_id}}. \u0627\u0644\u0645\u0648\u0636\u0648\u0639: {{ticket_subject}}. \u0633\u0646\u0639\u0648\u062f \u0625\u0644\u064a\u0643 \u0642\u0631\u064a\u0628\u0627. - {{company_name}}"
@@ -837,6 +844,16 @@ async function registerDailySync() {
   }
 }
 
+/**
+ * Check whether a conversation is a public agent reply (not a private note,
+ * customer message, or forward).
+ * @param {Object} conversation - Freshdesk conversation object
+ * @returns {boolean}
+ */
+function isPublicAgentReply(conversation) {
+  return conversation.incoming === false && conversation.private === false;
+}
+
 // ======================================================================
 // EXPORTS (FDK serverless pattern - inline function syntax)
 // ======================================================================
@@ -883,23 +900,23 @@ exports = {
   },
 
   onConversationCreateHandler: async function(args) {
-    var payload = args.data;
-    var conversation = payload.conversation || {};
+    const payload = args.data;
+    const conversation = payload.conversation || {};
 
     // Only send on public agent replies (not private notes, not customer messages, not forwards)
-    if (conversation.incoming !== false || conversation.private !== false) return;
+    if (!isPublicAgentReply(conversation)) return;
 
-    var settings = await loadSettings();
+    const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
-    var customerPhone = payload.requester?.phone;
+    const customerPhone = payload.requester?.phone;
     if (!customerPhone) return;
 
-    var credentials = await getCredentials(args);
-    var templates = await loadTemplates();
-    var companyName = await getCompanyName(args);
-    var placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
-    var message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
+    const credentials = await getCredentials(args);
+    const templates = await loadTemplates();
+    const companyName = await getCompanyName(args);
+    const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
+    const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
     if (!message) return;
 
     await send({
@@ -960,8 +977,8 @@ exports = {
     log('App installed. Initializing...');
 
     try {
-      var creds = getCredentials(args);
-      var gateway = await fetchGatewayData(creds);
+      const creds = getCredentials(args);
+      const gateway = await fetchGatewayData(creds);
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
       await initializeDefaultData();
       await registerDailySync();

@@ -70,11 +70,11 @@
    */
   function renderBalance() {
     state.client.db.get('kwtsms_gateway').then(function(data) {
-      var gateway = JSON.parse(data.kwtsms_gateway);
-      var balanceEl = document.getElementById('sidebar-balance');
+      const gateway = JSON.parse(data.kwtsms_gateway);
+      const balanceEl = document.getElementById('sidebar-balance');
       balanceEl.textContent = (gateway.balance || 0) + ' cr';
 
-      var statusDot = document.getElementById('status-dot');
+      const statusDot = document.getElementById('status-dot');
       statusDot.className = gateway.balance > 0 ? 'dot-green' : 'dot-red';
 
       if (!gateway.balance || gateway.balance <= 0) {
@@ -88,9 +88,9 @@
    * Validate and render the phone validation badge.
    */
   function renderPhoneValidation() {
-    var validEl = document.getElementById('phone-valid');
-    var stripped = state.contactPhone ? state.contactPhone.replace(/[\s\-()]/g, '') : '';
-    var isValid = state.contactPhone && /^\+?\d{7,15}$/.test(stripped);
+    const validEl = document.getElementById('phone-valid');
+    const stripped = state.contactPhone ? state.contactPhone.replace(/[\s\-()]/g, '') : '';
+    const isValid = state.contactPhone && /^\+?\d{7,15}$/.test(stripped);
 
     if (isValid) {
       validEl.textContent = 'Valid';
@@ -103,6 +103,13 @@
     if (!state.contactPhone) {
       document.getElementById('no-phone-msg').classList.remove('hidden');
     }
+  }
+
+  function setupSidebarControls() {
+    const textarea = document.getElementById('sms-message');
+    textarea.addEventListener('input', updateCharCount);
+    state.currentLang = (state.settings && state.settings.language) || 'en';
+    updateLangButtons();
   }
 
   function renderSidebar() {
@@ -124,12 +131,7 @@
     renderPhoneValidation();
     populateTemplates();
     loadHistory();
-
-    var textarea = document.getElementById('sms-message');
-    textarea.addEventListener('input', updateCharCount);
-
-    state.currentLang = (state.settings && state.settings.language) || 'en';
-    updateLangButtons();
+    setupSidebarControls();
   }
 
   function populateTemplates() {

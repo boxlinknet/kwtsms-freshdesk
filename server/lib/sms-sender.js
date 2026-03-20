@@ -69,7 +69,7 @@ function prepareRecipients(phones, coverage, debug) {
 /**
  * Dispatch the actual send call (single batch or bulk).
  */
-async function dispatchSend($request, credentials, recipients, cleanedMessage, settings) {
+function dispatchSend($request, credentials, recipients, cleanedMessage, settings) {
   const testFlag = settings.test_mode ? '1' : '0';
   const sender = settings.active_sender_id || 'KWT-SMS';
   debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
@@ -109,6 +109,13 @@ function buildLogEntry(eventType, recipients, cleanedMessage, success, result, t
 }
 
 /**
+ * Build the failure message string from an API result.
+ */
+function buildFailureMessage(result) {
+  return `Send failed: ${result.description || result.code || 'Unknown error'}`;
+}
+
+/**
  * Format a success or failure response from a send result.
  */
 function formatSendResponse(success, result, recipients, eventType) {
@@ -117,7 +124,7 @@ function formatSendResponse(success, result, recipients, eventType) {
     return { success: true, message: 'Sent successfully' };
   }
   log(`SMS failed: ${result.code || 'unknown'} - ${result.description || result.message || ''}`);
-  return { success: false, message: `Send failed: ${result.description || result.code || 'Unknown error'}` };
+  return { success: false, message: buildFailureMessage(result) };
 }
 
 /**

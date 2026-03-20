@@ -30,15 +30,30 @@ function resolveTemplate(templates, eventType, language, data) {
 }
 
 /**
+ * Resolve a status code to a localized label.
+ */
+function resolveStatusLabel(statusCode, language) {
+  const { STATUS_LABELS } = require('./constants');
+  return (STATUS_LABELS[language] || STATUS_LABELS.en)[statusCode] || '';
+}
+
+/**
+ * Resolve a priority code to a localized label.
+ */
+function resolvePriorityLabel(priorityCode, language) {
+  const { PRIORITY_LABELS } = require('./constants');
+  return (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[priorityCode] || '';
+}
+
+/**
  * Extract ticket-related placeholder fields.
  */
 function extractTicketFields(ticket, language) {
-  const { STATUS_LABELS, PRIORITY_LABELS } = require('./constants');
   return {
     ticket_id: ticket.id || '',
     ticket_subject: ticket.subject || '',
-    ticket_status: (STATUS_LABELS[language] || STATUS_LABELS.en)[ticket.status] || '',
-    ticket_priority: (PRIORITY_LABELS[language] || PRIORITY_LABELS.en)[ticket.priority] || '',
+    ticket_status: resolveStatusLabel(ticket.status, language),
+    ticket_priority: resolvePriorityLabel(ticket.priority, language),
     agent_name: ticket.responder_name || '',
     group_name: ticket.group_name || ''
   };
