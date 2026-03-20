@@ -25,3 +25,6 @@ napkin.md
 docker/
 research/
 .report.json
+.playwright-cli/
+coverage/
+*.yaml
