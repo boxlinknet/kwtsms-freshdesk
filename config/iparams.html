@@ -163,8 +163,7 @@
     </div>
 
     <div id="gateway-info" class="info-box hidden">
-      <div class="info-row"><span class="info-label">Balance:</span> <span id="info-balance">-</span></div>
-      <div class="info-row"><span class="info-label">Sender IDs:</span> <span id="info-senders">-</span></div>
+      <div class="info-row">Credentials will be verified and balance/sender IDs fetched when the app installs.</div>
     </div>
   </div>
 
@@ -217,62 +216,9 @@
         return;
       }
 
-      let btnTest = document.getElementById('btn-test');
-      btnTest.disabled = true;
-      btnTest.textContent = 'Logging in...';
-      showStatus('loading', 'Connecting to kwtSMS...');
-
-      // Use invokeTemplate with dynamic body (domain whitelisted via requests.json)
-      client.request.invokeTemplate('checkBalance', {
-        body: JSON.stringify({ username: username, password: password })
-      })
-        .then(function(data) {
-          let response = JSON.parse(data.response);
-          if (response.result === 'OK') {
-            document.getElementById('info-balance').textContent = response.available + ' credits';
-            showStatus('success', 'Connected! Balance: ' + response.available + ' credits');
-            fetchSenderIds(username, password);
-            document.getElementById('gateway-info').classList.remove('hidden');
-          } else {
-            showStatus('error', 'Authentication failed: ' + (response.description || 'Check your credentials'));
-            resetForm();
-          }
-        })
-        .catch(function() {
-          showStatus('error', 'Could not connect to kwtSMS. Please try again.');
-          resetForm();
-        })
-        .finally(function() {
-          btnTest.disabled = false;
-          btnTest.textContent = 'Login';
-        });
-    }
-
-    function fetchSenderIds(username, password) {
-      client.request.invokeTemplate('getSenderIds', {
-        body: JSON.stringify({ username: username, password: password })
-      })
-        .then(function(data) {
-          let response = JSON.parse(data.response);
-          if (response.result === 'OK' && response.senderid) {
-            let select = document.getElementById('kwtsms_senderid');
-            // Clear existing options before adding new ones from API
-            while (select.firstChild) {
-              select.removeChild(select.firstChild);
-            }
-            response.senderid.forEach(function(sid) {
-              let option = document.createElement('option');
-              option.value = sid;
-              option.textContent = sid;
-              select.appendChild(option);
-            });
-            document.getElementById('sender-group').classList.remove('hidden');
-            document.getElementById('info-senders').textContent = response.senderid.join(', ');
-          }
-        })
-        .catch(function(err) {
-          console.error('Failed to fetch sender IDs:', err);
-        });
+      // Credentials validated locally. Full API verification happens during onAppInstall.
+      showStatus('success', 'Credentials saved. They will be verified when the app installs.');
+      document.getElementById('sender-group').classList.remove('hidden');
     }
 
     function showStatus(type, message) {
@@ -280,11 +226,6 @@
       statusEl.classList.remove('hidden', 'status-success', 'status-error', 'status-loading');
       statusEl.classList.add('status-' + type);
       statusEl.textContent = message;
-    }
-
-    function resetForm() {
-      document.getElementById('sender-group').classList.add('hidden');
-      document.getElementById('gateway-info').classList.add('hidden');
     }
 
     /**
