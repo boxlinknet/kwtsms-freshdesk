@@ -830,8 +830,7 @@ exports = {
     log('App installed. Initializing...');
 
     try {
-      // Initial sync
-      const creds = await getCredentials(args);
+      const creds = getCredentials(args);
       const credBody = JSON.stringify(creds);
 
       const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
@@ -898,7 +897,7 @@ exports = {
 
       log('App initialization complete.');
     } catch (err) {
-      console.error('[kwtsms] App install initialization failed:', err.message);
+      console.error('[kwtsms] App install initialization failed:', err.message || JSON.stringify(err));
     }
 
     renderData();
