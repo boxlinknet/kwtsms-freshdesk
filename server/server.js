@@ -904,7 +904,7 @@ exports = {
     renderData();
   },
 
-  onAppUninstallHandler: async function(args) {
+  onAppUninstallHandler: async function() {
     
     
 
