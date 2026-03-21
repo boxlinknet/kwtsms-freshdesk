@@ -903,6 +903,10 @@ function buildInstallSettings(gateway, domain) {
   });
 }
 
+function formatError(err) {
+  return err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+}
+
 // ======================================================================
 // EXPORTS (FDK serverless pattern - inline function syntax)
 // ======================================================================
@@ -1021,11 +1025,9 @@ exports = {
       const creds = getCredentials(args);
       const gateway = await fetchGatewayData(creds);
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-      log('Gateway synced. Balance: ' + gateway.balance);
       return { success: true, balance: gateway.balance };
     } catch (err) {
-      log('Gateway sync failed: ' + (err.message || JSON.stringify(err)));
-      return { success: false, message: err.message || 'Sync failed' };
+      return { success: false, message: formatError(err) };
     }
   },
 

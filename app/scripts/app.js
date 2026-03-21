@@ -801,19 +801,17 @@
     if (btn) btn.disabled = true;
 
     if (state.client && state.client.request && state.client.request.invoke) {
-      state.client.request.invoke('syncGateway', {}).then(function () {
-        showToast('Gateway synced successfully', 'success');
+      state.client.request.invoke('syncGateway', {}).then(function (result) {
+        const resp = result && result.response ? (typeof result.response === 'string' ? JSON.parse(result.response) : result.response) : {};
+        if (resp.success) {
+          showToast('Gateway synced. Balance: ' + resp.balance, 'success');
+        } else {
+          showToast('Sync failed: ' + (resp.message || 'Unknown error'), 'error');
+        }
         loadSettings();
         loadDashboard();
       }).catch(function (err) {
-        // Fallback: try invoking templates directly
-        syncGatewayDirect().then(function () {
-          showToast('Gateway synced successfully', 'success');
-          loadSettings();
-          loadDashboard();
-        }).catch(function () {
-          showToast('Sync failed: ' + (err.message || 'Unknown error'), 'error');
-        });
+        showToast('Sync failed: ' + (err.message || JSON.stringify(err)), 'error');
       }).finally(function () {
         if (btn) btn.disabled = false;
       });
