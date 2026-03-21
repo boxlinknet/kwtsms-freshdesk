@@ -80,11 +80,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  margin: 0 -16px 0;
-  background: linear-gradient(135deg, #FFA200 0%, #FFB840 100%);
-  color: #fff;
-  border-radius: 0;
+  padding: 16px 0;
+  border-block-end: 1px solid var(--color-border);
+  margin-block-end: 0;
 }
 
 .app-logo {
@@ -94,32 +92,14 @@ body {
 }
 
 .logo-img {
-  height: 32px;
+  height: 36px;
   width: auto;
-  filter: brightness(0) invert(1);
-}
-
-.logo-icon {
-  font-size: 1.5rem;
-  color: #fff;
-}
-
-.app-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #fff;
-  font-family: var(--font-heading);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.header-actions .btn {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .header-actions .btn:hover:not(:disabled) {
