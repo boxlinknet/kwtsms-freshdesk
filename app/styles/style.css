@@ -232,6 +232,19 @@ body {
   margin-block-start: 2px;
 }
 
+/* ---------- Status Bar ---------- */
+.status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-block-end: 16px;
+  align-items: center;
+}
+
 /* ---------- Section Block ---------- */
 .section-block {
   background: var(--color-surface);

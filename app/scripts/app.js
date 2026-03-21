@@ -471,7 +471,7 @@
   function renderGatewayConnection(gw) {
     const connected = gw && gw.last_sync;
     setStatusDot('gw-connected-dot', connected ? 'on' : 'off');
-    setText('gw-connected-text', connected ? 'Connected' : 'Disconnected');
+    setText('gw-connected-text', connected ? 'Gateway: Connected' : 'Gateway: Disconnected');
   }
 
   /**
@@ -480,7 +480,7 @@
   function renderGatewayToggles() {
     const enabled = state.currentSettings.enabled;
     setStatusDot('gw-enabled-dot', enabled ? 'on' : 'off');
-    setText('gw-enabled-text', enabled ? 'Enabled' : 'Disabled');
+    setText('gw-enabled-text', enabled ? 'SMS: Enabled' : 'SMS: Disabled');
 
     const testMode = state.currentSettings.test_mode;
     setStatusDot('gw-testmode-dot', testMode ? 'warn' : 'on');
@@ -547,13 +547,6 @@
     tdTime.textContent = formatDate(rec.timestamp);
     tr.appendChild(tdTime);
 
-    const tdEvent = document.createElement('td');
-    const badge = document.createElement('span');
-    badge.className = 'badge badge-event';
-    badge.textContent = formatEventLabel(rec.event_type);
-    tdEvent.appendChild(badge);
-    tr.appendChild(tdEvent);
-
     const tdRecip = document.createElement('td');
     tdRecip.textContent = rec.recipient_phone || '--';
     tr.appendChild(tdRecip);
@@ -565,6 +558,13 @@
     msgSpan.title = rec.message_preview || '';
     tdMsg.appendChild(msgSpan);
     tr.appendChild(tdMsg);
+
+    const tdEvent = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'badge badge-event';
+    badge.textContent = formatEventLabel(rec.event_type);
+    tdEvent.appendChild(badge);
+    tr.appendChild(tdEvent);
 
     const tdStatus = document.createElement('td');
     const statusBadge = document.createElement('span');

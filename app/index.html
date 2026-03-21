@@ -39,6 +39,26 @@
 
       <!-- ==================== DASHBOARD ==================== -->
       <section id="tab-dashboard" class="tab-panel active" role="tabpanel">
+        <!-- Gateway Status Bar (top) -->
+        <div class="status-bar">
+          <div class="status-item">
+            <span class="status-dot" id="gw-connected-dot"></span>
+            <span class="status-text" id="gw-connected-text">Gateway: Disconnected</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot" id="gw-enabled-dot"></span>
+            <span class="status-text" id="gw-enabled-text">SMS: Disabled</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot" id="gw-testmode-dot"></span>
+            <span class="status-text" id="gw-testmode-text">Test Mode: OFF</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot status-dot-info"></span>
+            <span class="status-text">Sender ID: <strong id="gw-sender-id">--</strong></span>
+          </div>
+        </div>
+
         <!-- Stat Cards -->
         <div class="stat-cards">
           <div class="stat-card stat-card-balance">
@@ -59,29 +79,6 @@
           </div>
         </div>
 
-        <!-- Gateway Status -->
-        <div class="section-block">
-          <h2 class="section-title">Gateway Status</h2>
-          <div class="status-grid">
-            <div class="status-item">
-              <span class="status-dot" id="gw-connected-dot"></span>
-              <span class="status-text" id="gw-connected-text">Disconnected</span>
-            </div>
-            <div class="status-item">
-              <span class="status-dot" id="gw-enabled-dot"></span>
-              <span class="status-text" id="gw-enabled-text">Disabled</span>
-            </div>
-            <div class="status-item">
-              <span class="status-dot" id="gw-testmode-dot"></span>
-              <span class="status-text" id="gw-testmode-text">Test Mode: OFF</span>
-            </div>
-            <div class="status-item">
-              <span class="status-dot status-dot-info"></span>
-              <span class="status-text">Sender ID: <strong id="gw-sender-id">--</strong></span>
-            </div>
-          </div>
-        </div>
-
         <!-- Recent Activity -->
         <div class="section-block">
           <h2 class="section-title">Recent Activity</h2>
@@ -90,9 +87,9 @@
               <thead>
                 <tr>
                   <th>Time</th>
-                  <th>Event</th>
                   <th>Recipient</th>
                   <th>Message</th>
+                  <th>Event</th>
                   <th>Status</th>
                 </tr>
               </thead>
