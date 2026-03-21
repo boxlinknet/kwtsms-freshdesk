@@ -211,9 +211,12 @@
 
         <!-- Actions -->
         <div class="section-block">
-          <div class="button-row">
-            <button class="btn btn-secondary" id="btn-sync-now">Sync Now</button>
-            <button class="btn btn-primary" id="btn-send-test">Send Test SMS</button>
+          <div class="button-row" style="justify-content: flex-start;">
+            <div>
+              <button class="btn btn-primary" id="btn-send-test">Send Test SMS</button>
+              <p class="setting-desc" style="margin-top: 6px;">Opens a dialog to enter a phone number and message. Sends a real SMS with test=1 (queued but not delivered).</p>
+            </div>
+            <button class="btn btn-secondary" id="btn-sync-now" style="margin-inline-start: auto;">Sync Now</button>
           </div>
         </div>
 
