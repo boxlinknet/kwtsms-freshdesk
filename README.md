@@ -23,6 +23,12 @@ kwtSMS for Freshdesk integrates the [kwtSMS](https://www.kwtsms.com) SMS gateway
 - **Daily auto-sync** for balance, sender IDs, and country coverage
 - **Test mode** to queue SMS without delivery during setup
 
+## Requirements
+
+- A [kwtSMS](https://www.kwtsms.com) account with API access
+- SMS credits in your kwtSMS account
+- A registered sender ID (KWT-SMS is for testing only)
+
 ## Installation
 
 1. Install the app from the Freshworks Marketplace
@@ -30,12 +36,6 @@ kwtSMS for Freshdesk integrates the [kwtSMS](https://www.kwtsms.com) SMS gateway
 3. Open the app, go to Settings, and configure sender ID, company name, and country code
 4. Go to Notifications and toggle which SMS notifications to enable
 5. Enable the SMS gateway in Settings
-
-## Requirements
-
-- A [kwtSMS](https://www.kwtsms.com) account with API access
-- SMS credits in your kwtSMS account
-- A registered sender ID (KWT-SMS is for testing only)
 
 ## Support
 
