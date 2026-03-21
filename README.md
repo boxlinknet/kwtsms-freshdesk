@@ -84,7 +84,6 @@ kwtSMS for Freshdesk integrates the [kwtSMS](https://www.kwtsms.com) SMS gateway
 
 - Website: [www.kwtsms.com](https://www.kwtsms.com)
 - Support: [www.kwtsms.com/support.html](https://www.kwtsms.com/support.html)
-- Email: support@kwtsms.com
 
 ## Privacy and Terms
 
