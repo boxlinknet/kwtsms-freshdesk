@@ -883,11 +883,23 @@
    * Process the result of sending a test SMS.
    * @param {Object} result - Invoke result
    */
+  /**
+   * Show inline feedback in the Gateway Test card.
+   */
+  function showTestFeedback(message, type) {
+    const el = document.getElementById('test-sms-feedback');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)';
+    el.style.color = type === 'success' ? 'var(--color-success)' : 'var(--color-error)';
+    el.textContent = message;
+  }
+
   function handleTestSmsResult(result) {
     if (result && result.response && result.response.success !== false) {
-      showToast('Test SMS sent successfully', 'success');
+      showTestFeedback('Test SMS sent successfully', 'success');
     } else {
-      showToast('Failed to send test SMS', 'error');
+      showTestFeedback('Failed to send test SMS', 'error');
     }
   }
 
@@ -897,6 +909,9 @@
   function handleSendTestSms() {
     const inputs = validateTestSmsInputs();
     if (!inputs) return;
+
+    const feedback = document.getElementById('test-sms-feedback');
+    if (feedback) feedback.style.display = 'none';
 
     const sendBtn = document.getElementById('btn-send-test');
     if (sendBtn) {
@@ -908,7 +923,7 @@
       state.client.request.invoke('manualSendSms', {
         data: { phone: inputs.phone, message: inputs.message }
       }).then(handleTestSmsResult).catch(function (err) {
-        showToast('Error: ' + (err.message || 'Send failed'), 'error');
+        showTestFeedback('Error: ' + (err.message || 'Send failed'), 'error');
       }).finally(function () {
         if (sendBtn) {
           sendBtn.disabled = false;
@@ -916,7 +931,7 @@
         }
       });
     } else {
-      showToast('Cannot send: client not available', 'error');
+      showTestFeedback('Cannot send: client not available', 'error');
       if (sendBtn) {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send Test SMS';
