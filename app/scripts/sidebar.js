@@ -109,7 +109,6 @@
     const textarea = document.getElementById('sms-message');
     textarea.addEventListener('input', updateCharCount);
     state.currentLang = (state.settings && state.settings.language) || 'en';
-    updateLangButtons();
   }
 
   function renderSidebar() {
@@ -179,24 +178,6 @@
     updateCharCount();
   };
 
-  // Language toggle (called from onclick)
-  window.setLang = function(lang) {
-    state.currentLang = lang;
-    updateLangButtons();
-    const textarea = document.getElementById('sms-message');
-    textarea.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    // Re-apply template if one was selected
-    const select = document.getElementById('template-select');
-    if (select.value) {
-      window.selectTemplate();
-    }
-  };
-
-  function updateLangButtons() {
-    document.getElementById('btn-lang-en').className = state.currentLang === 'en' ? 'lang-btn active' : 'lang-btn';
-    document.getElementById('btn-lang-ar').className = state.currentLang === 'ar' ? 'lang-btn active' : 'lang-btn';
-  }
-
   /** GSM-7 basic charset + extended charset as a string for lookup */
   const GSM7_ALL = '@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e'
     + ' \u00c6\u00e6\u00df\u00c9!"#\u00a4%&\'()*+,-./0123456789:;<=>?'
@@ -225,7 +206,7 @@
     document.getElementById('char-count').textContent = chars;
     document.getElementById('char-max').textContent = isUnicode ? '70' : '160';
     document.getElementById('sms-parts').textContent = parts;
-    document.getElementById('encoding-type').textContent = isUnicode ? 'Unicode' : 'GSM-7';
+    document.getElementById('encoding-type').textContent = isUnicode ? 'Arabic' : 'English';
   }
 
   // Send SMS (called from onclick)

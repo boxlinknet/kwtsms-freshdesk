@@ -12,7 +12,7 @@
     /* Sidebar-specific overrides for narrow width */
     body { margin: 0; padding: 8px; font-family: 'Lato', 'Helvetica', 'Arial', sans-serif; font-size: 13px; color: #434345; background: #fff; }
     .sidebar-header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #E8E5E0; margin-bottom: 10px; }
-    .sidebar-icon { width: 28px; height: 28px; background: #FFA200; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; font-family: 'Montserrat', sans-serif; }
+    .sidebar-logo { height: 24px; width: auto; }
     .sidebar-title { font-size: 14px; font-weight: 700; color: #434345; font-family: 'Montserrat', sans-serif; }
     .sidebar-subtitle { font-size: 11px; color: #6B6B6D; }
     .sidebar-meta { margin-left: auto; text-align: right; }
@@ -32,9 +32,6 @@
     .sms-textarea { width: 100%; min-height: 70px; padding: 8px; border: 1px solid #E8E5E0; border-radius: 4px; font-size: 12px; resize: vertical; box-sizing: border-box; line-height: 1.5; color: #434345; font-family: 'Lato', sans-serif; }
     .sms-textarea:focus { outline: none; border-color: #FFA200; box-shadow: 0 0 0 2px rgba(255,162,0,0.2); }
     .char-info { display: flex; justify-content: space-between; font-size: 10px; color: #6B6B6D; margin: 4px 0 8px; }
-    .lang-toggle { display: flex; gap: 4px; margin-bottom: 10px; }
-    .lang-btn { padding: 3px 10px; border: 1px solid #E8E5E0; border-radius: 4px; font-size: 11px; cursor: pointer; background: #fff; color: #6B6B6D; font-family: 'Montserrat', sans-serif; font-weight: 600; }
-    .lang-btn.active { background: #FFA200; color: #fff; border-color: #FFA200; }
     .btn-send { width: 100%; padding: 10px; background: #FFA200; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 12px; font-family: 'Montserrat', sans-serif; }
     .btn-send:hover { background: #E89200; }
     .btn-send:disabled { background: #9B9B9D; cursor: not-allowed; }
@@ -65,7 +62,7 @@
   <div id="sidebar-content">
     <!-- Header -->
     <div class="sidebar-header">
-      <div class="sidebar-icon">KW</div>
+      <img src="img/icon.svg" alt="kwtSMS" class="sidebar-logo">
       <div>
         <div class="sidebar-title">kwtSMS</div>
         <div class="sidebar-subtitle">Send SMS to requester</div>
@@ -102,13 +99,7 @@
     <div class="form-label">Message</div>
     <textarea id="sms-message" class="sms-textarea" placeholder="Type your message..."></textarea>
     <div class="char-info">
-      <span><span id="char-count">0</span>/<span id="char-max">160</span> chars | <span id="sms-parts">0</span> SMS (<span id="encoding-type">GSM-7</span>)</span>
-    </div>
-
-    <!-- Language toggle -->
-    <div class="lang-toggle">
-      <button id="btn-lang-en" class="lang-btn active" onclick="setLang('en')">EN</button>
-      <button id="btn-lang-ar" class="lang-btn" onclick="setLang('ar')">AR</button>
+      <span><span id="char-count">0</span>/<span id="char-max">160</span> chars | <span id="sms-parts">0</span> SMS | <span id="encoding-type">English</span></span>
     </div>
 
     <!-- Send -->
