@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS = {
   debug: false,
   language: 'en',
   active_sender_id: 'KWT-SMS',
+  company_name: '',
   schema_version: 1
 };
 

@@ -36,6 +36,7 @@
     debug: false,
     language: 'en',
     active_sender_id: 'KWT-SMS',
+    company_name: '',
     schema_version: 1
   };
 
@@ -629,6 +630,14 @@
     addChangeListener('setting-test-mode', function (val) { saveSettingField('test_mode', val); });
     addChangeListener('setting-debug', function (val) { saveSettingField('debug', val); });
 
+    // Company Name text input (save on blur)
+    const companyInput = document.getElementById('setting-company-name');
+    if (companyInput) {
+      companyInput.addEventListener('change', function () {
+        saveSettingField('company_name', companyInput.value.trim());
+      });
+    }
+
     // Dropdowns
     addSelectListener('setting-language', function (val) { saveSettingField('language', val); });
     addSelectListener('setting-sender-id', function (val) { saveSettingField('active_sender_id', val); });
@@ -666,6 +675,7 @@
       setCheckbox('setting-debug', state.currentSettings.debug);
       setSelectValue('setting-language', state.currentSettings.language);
       setSelectValue('setting-sender-id', state.currentSettings.active_sender_id);
+      setInputValue('setting-company-name', state.currentSettings.company_name || '');
     }).catch(function () { /* ignored */ });
 
     // Gateway info
@@ -1393,6 +1403,16 @@
   function getCheckbox(id) {
     const el = document.getElementById(id);
     return el ? el.checked : false;
+  }
+
+  /**
+   * Set a text input value by ID.
+   * @param {string} id - Input element ID
+   * @param {string} value - Value to set
+   */
+  function setInputValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value || '';
   }
 
   /**

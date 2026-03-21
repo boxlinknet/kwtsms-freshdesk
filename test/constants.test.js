@@ -50,6 +50,7 @@ describe('constants exports', () => {
     assert.equal(ds.debug, false);
     assert.equal(ds.language, 'en');
     assert.equal(ds.active_sender_id, 'KWT-SMS');
+    assert.equal(ds.company_name, '');
     assert.equal(ds.schema_version, 1);
   });
 

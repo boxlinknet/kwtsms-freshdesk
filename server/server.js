@@ -62,6 +62,7 @@ const DEFAULT_SETTINGS = {
   debug: false,
   language: 'en',
   active_sender_id: 'KWT-SMS',
+  company_name: '',
   schema_version: 1
 };
 
@@ -667,7 +668,7 @@ function sleep(ms) {
 }
 
 // ======================================================================
-// HELPERS: Credentials, Settings, Templates, Admin Alerts, Company Name
+// HELPERS: Credentials, Settings, Templates, Admin Alerts
 // ======================================================================
 
 function getCredentials(args) {
@@ -695,9 +696,6 @@ async function loadAdminAlerts() {
   } catch (e) { return DEFAULT_ADMIN_ALERTS; }
 }
 
-function getCompanyName(args) {
-  return (args.iparams && args.iparams.kwtsms_company_name) || '';
-}
 
 // ======================================================================
 // HANDLER HELPERS (reduce cyclomatic complexity of exports)
@@ -867,9 +865,9 @@ exports = {
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
-    const credentials = await getCredentials(args);
+    const credentials = getCredentials(args);
     const templates = await loadTemplates();
-    const companyName = await getCompanyName(args);
+    const companyName = settings.company_name || '';
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
     const ticketIdVal = payload.ticket?.id;
     const sendCtx = { credentials };
@@ -881,16 +879,16 @@ exports = {
 
   onTicketUpdateHandler: async function(args) {
     const { data: payload } = args;
-    
-    
+
+
     const changes = payload.changes || {};
 
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
-    const credentials = await getCredentials(args);
+    const credentials = getCredentials(args);
     const templates = await loadTemplates();
-    const companyName = await getCompanyName(args);
+    const companyName = settings.company_name || '';
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
     const ticketIdVal = payload.ticket?.id;
     const sendCtx = { credentials };
@@ -912,9 +910,9 @@ exports = {
     const customerPhone = payload.requester?.phone;
     if (!customerPhone) return;
 
-    const credentials = await getCredentials(args);
+    const credentials = getCredentials(args);
     const templates = await loadTemplates();
-    const companyName = await getCompanyName(args);
+    const companyName = settings.company_name || '';
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
     const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
     if (!message) return;
@@ -942,7 +940,7 @@ exports = {
     log('Running daily sync...');
 
     try {
-      const creds = await getCredentials(args);
+      const creds = getCredentials(args);
       const credBody = JSON.stringify(creds);
 
       const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
@@ -980,7 +978,26 @@ exports = {
       const creds = getCredentials(args);
       const gateway = await fetchGatewayData(creds);
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-      await initializeDefaultData();
+
+      // Derive default company_name from Freshdesk domain
+      const domain = (args.data && args.data.domain) || '';
+      const companyName = domain ? domain.split('.')[0] : '';
+
+      // Pick first available sender ID from gateway, fallback to KWT-SMS
+      const activeSenderId = (gateway.senderids && gateway.senderids.length > 0)
+        ? gateway.senderids[0]
+        : 'KWT-SMS';
+
+      // Override defaults with install-time values
+      const installSettings = Object.assign({}, DEFAULT_SETTINGS, {
+        company_name: companyName,
+        active_sender_id: activeSenderId
+      });
+      await $db.set(DS_KEYS.SETTINGS, { data: JSON.stringify(installSettings) });
+      await $db.set(DS_KEYS.TEMPLATES, { data: JSON.stringify(INSTALL_DEFAULT_TEMPLATES) });
+      await $db.set(DS_KEYS.ADMIN_ALERTS, { data: JSON.stringify(DEFAULT_ADMIN_ALERTS) });
+      await $db.set(DS_KEYS.STATS, { data: JSON.stringify(DEFAULT_STATS) });
+
       await registerDailySync();
       log('App initialization complete.');
     } catch (err) {
@@ -1023,7 +1040,7 @@ exports = {
       return { success: false, message: 'Phone and message are required' };
     }
 
-    const credentials = await getCredentials(args);
+    const credentials = getCredentials(args);
 
     return await send({
       credentials: credentials,
