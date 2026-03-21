@@ -785,7 +785,7 @@ async function fetchGatewayData(creds) {
   return {
     balance: balance.available || 0,
     senderids: senders.senderid || [],
-    coverage: coverage.coverage || [],
+    coverage: coverage.prefixes || coverage.coverage || [],
     last_sync: new Date().toISOString()
   };
 }
@@ -966,7 +966,7 @@ exports = {
       const gateway = {
         balance: balance.available || 0,
         senderids: senders.senderid || [],
-        coverage: coverage.coverage || [],
+        coverage: coverage.prefixes || coverage.coverage || [],
         last_sync: new Date().toISOString()
       };
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
