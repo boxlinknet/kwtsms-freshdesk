@@ -748,7 +748,7 @@
     // Set default test message with timestamp
     const testMsg = document.getElementById('test-message');
     if (testMsg && !testMsg.value) {
-      testMsg.value = 'kwtSMS gateway test - ' + new Date().toISOString().replace('T', ' ').substring(0, 19);
+      testMsg.value = 'kwtSMS Freshdesk gateway test - ' + new Date().toLocaleString();
     }
   }
 
