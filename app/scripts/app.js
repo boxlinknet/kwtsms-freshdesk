@@ -261,7 +261,7 @@
    * @returns {Promise<Object>} Query result
    */
   function entityGetAll(entity, opts) {
-    if (!state.client) return Promise.resolve({ records: [], next: null });
+    if (!state.client || !state.client.db || !state.client.db.entity) return Promise.resolve({ records: [], next: null });
     const params = opts || {};
     return state.client.db.entity.getAll(entity, params).catch(function () {
       return { records: [], next: null };
@@ -274,7 +274,7 @@
    * @returns {Promise}
    */
   function entityDeleteAll(entity) {
-    if (!state.client) return Promise.resolve();
+    if (!state.client || !state.client.db || !state.client.db.entity) return Promise.resolve();
     return state.client.db.entity.deleteAll(entity).catch(function () {
       // Ignore errors
     });
