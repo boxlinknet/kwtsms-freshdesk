@@ -1,40 +1,45 @@
 /* ============================================
    kwtSMS for Freshdesk - Full Page App Styles
+   kwtSMS Branding: Amber Primary, Montserrat/Lato
    ============================================ */
 
 /* ---------- CSS Custom Properties ---------- */
 :root {
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-success: #059669;
-  --color-success-light: #ecfdf5;
-  --color-warning: #d97706;
-  --color-warning-light: #fffbeb;
-  --color-error: #dc2626;
-  --color-error-light: #fef2f2;
-  --color-info: #0891b2;
-  --color-info-light: #ecfeff;
+  --color-primary: #FFA200;
+  --color-primary-hover: #E89200;
+  --color-primary-light: #FFF8EB;
+  --color-primary-dark: #CC8200;
+  --color-accent: #79CCF2;
+  --color-accent-light: #EBF7FD;
+  --color-success: #2ECC71;
+  --color-success-light: #EAFAF1;
+  --color-warning: #F39C12;
+  --color-warning-light: #FEF5E7;
+  --color-error: #E74C3C;
+  --color-error-light: #FDEDEB;
+  --color-info: #79CCF2;
+  --color-info-light: #EBF7FD;
 
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
+  --color-bg: #FAFAF8;
+  --color-surface: #FFFFFF;
+  --color-border: #E8E5E0;
+  --color-border-light: #F2F0ED;
 
-  --color-text: #1e293b;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
+  --color-text: #434345;
+  --color-text-secondary: #6B6B6D;
+  --color-text-muted: #9B9B9D;
 
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 3px rgba(67, 67, 69, 0.06);
+  --shadow-md: 0 4px 12px rgba(67, 67, 69, 0.08);
+  --shadow-lg: 0 8px 24px rgba(67, 67, 69, 0.12);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+  --font-heading: 'Montserrat', sans-serif;
+  --font-body: 'Lato', 'Helvetica', 'Arial', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', monospace;
 
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -56,7 +61,7 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   color: var(--color-text);
   background-color: var(--color-bg);
   line-height: 1.5;
@@ -75,9 +80,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
-  border-block-end: 1px solid var(--color-border);
-  margin-block-end: 0;
+  padding: 16px 20px;
+  margin: 0 -16px 0;
+  background: linear-gradient(135deg, #FFA200 0%, #FFB840 100%);
+  color: #fff;
+  border-radius: 0;
 }
 
 .app-logo {
@@ -88,19 +95,30 @@ body {
 
 .logo-icon {
   font-size: 1.5rem;
-  color: var(--color-primary);
+  color: #fff;
 }
 
 .app-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: #fff;
+  font-family: var(--font-heading);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.header-actions .btn {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.header-actions .btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
 }
 
 /* ---------- Tab Navigation ---------- */
@@ -120,6 +138,7 @@ body {
   color: var(--color-text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
+  font-family: var(--font-heading);
   cursor: pointer;
   white-space: nowrap;
   border-block-end: 2px solid transparent;
@@ -134,6 +153,7 @@ body {
 .tab-btn.active {
   color: var(--color-primary);
   border-block-end-color: var(--color-primary);
+  font-weight: 600;
 }
 
 /* ---------- Tab Panels ---------- */
@@ -166,8 +186,38 @@ body {
   padding: 20px;
   text-align: center;
   box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast);
 }
 
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Stat card color variants */
+.stat-card-balance {
+  border-top: 3px solid var(--color-primary);
+}
+.stat-card-balance .stat-value {
+  color: var(--color-primary);
+}
+
+.stat-card-sent {
+  border-top: 3px solid var(--color-accent);
+}
+.stat-card-sent .stat-value {
+  color: var(--color-accent);
+}
+
+.stat-card-month {
+  border-top: 3px solid var(--color-success);
+}
+.stat-card-month .stat-value {
+  color: var(--color-success);
+}
+
+.stat-card-error {
+  border-top: 3px solid var(--color-error);
+}
 .stat-card-error .stat-value {
   color: var(--color-error);
 }
@@ -179,6 +229,7 @@ body {
   letter-spacing: 0.05em;
   color: var(--color-text-secondary);
   margin-block-end: 4px;
+  font-family: var(--font-heading);
 }
 
 .stat-value {
@@ -186,6 +237,7 @@ body {
   font-weight: 700;
   color: var(--color-primary);
   line-height: 1.2;
+  font-family: var(--font-heading);
 }
 
 .stat-unit {
@@ -211,6 +263,7 @@ body {
   margin-block-end: 16px;
   padding-block-end: 8px;
   border-block-end: 1px solid var(--color-border-light);
+  font-family: var(--font-heading);
 }
 
 .section-subtitle {
@@ -218,6 +271,7 @@ body {
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-block-end: 12px;
+  font-family: var(--font-heading);
 }
 
 /* ---------- Status Grid ---------- */
@@ -246,7 +300,7 @@ body {
 
 .status-dot.status-on {
   background-color: var(--color-success);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
 }
 
 .status-dot.status-off {
@@ -285,6 +339,10 @@ body {
   color: var(--color-text-secondary);
   border-block-end: 2px solid var(--color-border);
   white-space: nowrap;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .data-table td {
@@ -319,6 +377,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   white-space: nowrap;
+  font-family: var(--font-heading);
 }
 
 .badge-sent {
@@ -332,8 +391,8 @@ body {
 }
 
 .badge-event {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
 }
 
 .badge-warning {
@@ -441,7 +500,7 @@ body {
   background-color: var(--color-surface);
   color: var(--color-text);
   font-size: 0.875rem;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   cursor: pointer;
   min-width: 140px;
   transition: border-color var(--transition-fast);
@@ -450,7 +509,7 @@ body {
 .form-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 162, 0, 0.15);
 }
 
 .form-input {
@@ -460,7 +519,7 @@ body {
   background-color: var(--color-surface);
   color: var(--color-text);
   font-size: 0.875rem;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   width: 100%;
   transition: border-color var(--transition-fast);
 }
@@ -468,7 +527,7 @@ body {
 .form-input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 162, 0, 0.15);
 }
 
 .form-textarea {
@@ -478,7 +537,7 @@ body {
   background-color: var(--color-surface);
   color: var(--color-text);
   font-size: 0.875rem;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   width: 100%;
   resize: vertical;
   transition: border-color var(--transition-fast);
@@ -487,7 +546,7 @@ body {
 .form-textarea:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 162, 0, 0.15);
 }
 
 .form-label {
@@ -517,7 +576,7 @@ body {
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast);
@@ -538,6 +597,12 @@ body {
   background-color: var(--color-primary-hover);
 }
 
+.btn-primary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 162, 0, 0.2);
+}
+
 .btn-secondary {
   background-color: var(--color-bg);
   color: var(--color-text);
@@ -554,7 +619,7 @@ body {
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #b91c1c;
+  background-color: #c0392b;
 }
 
 .btn-ghost {
@@ -602,6 +667,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
+  font-family: var(--font-heading);
 }
 
 .info-value {
@@ -634,7 +700,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
 }
 
 .pill-btn:hover {
@@ -672,6 +738,7 @@ body {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text-secondary);
+  font-family: var(--font-heading);
 }
 
 .char-counter {
@@ -698,11 +765,11 @@ body {
 .chip {
   display: inline-block;
   padding: 4px 10px;
-  border: 1px solid var(--color-border);
+  border: 1px solid #E8D5A8;
   border-radius: 14px;
   font-size: 0.75rem;
   font-family: var(--font-mono);
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
   background-color: var(--color-primary-light);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -840,6 +907,7 @@ body {
   font-weight: 700;
   font-size: 1rem;
   margin-block-end: 12px;
+  font-family: var(--font-heading);
 }
 
 .step-title {
@@ -847,6 +915,7 @@ body {
   font-weight: 600;
   color: var(--color-text);
   margin-block-end: 6px;
+  font-family: var(--font-heading);
 }
 
 .step-desc {
@@ -887,6 +956,7 @@ body {
 .help-link-text {
   font-size: 0.875rem;
   font-weight: 500;
+  color: var(--color-accent);
 }
 
 /* ---------- Modal ---------- */
@@ -894,7 +964,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(67, 67, 69, 0.4);
   z-index: 1000;
   align-items: center;
   justify-content: center;
@@ -930,6 +1000,7 @@ body {
 .modal-title {
   font-size: 1rem;
   font-weight: 600;
+  font-family: var(--font-heading);
 }
 
 .modal-close {

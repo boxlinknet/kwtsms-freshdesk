@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>kwtSMS for Freshdesk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;500;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
@@ -39,17 +42,17 @@
       <section id="tab-dashboard" class="tab-panel active" role="tabpanel">
         <!-- Stat Cards -->
         <div class="stat-cards">
-          <div class="stat-card">
+          <div class="stat-card stat-card-balance">
             <div class="stat-label">Balance</div>
             <div class="stat-value" id="stat-balance">--</div>
             <div class="stat-unit">credits</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-sent">
             <div class="stat-label">Sent Today</div>
             <div class="stat-value" id="stat-today">0</div>
             <div class="stat-unit">messages</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-month">
             <div class="stat-label">This Month</div>
             <div class="stat-value" id="stat-month">0</div>
             <div class="stat-unit">messages</div>
