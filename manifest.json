@@ -5,11 +5,11 @@
       "location": {
         "full_page_app": {
           "url": "index.html",
-          "icon": "img/icon-square.png"
+          "icon": "img/icon-64.png"
         },
         "ticket_sidebar": {
           "url": "sidebar.html",
-          "icon": "img/icon-square.png"
+          "icon": "img/icon-64.png"
         }
       },
       "events": {
