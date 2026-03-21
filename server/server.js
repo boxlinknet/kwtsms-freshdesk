@@ -1021,15 +1021,42 @@ exports = {
   },
 
   syncGateway: async function(args) {
+    const debug = [];
     try {
-      // Single call test to diagnose timeout
+      debug.push('step1:getCreds');
       const creds = getCredentials(args);
-      const credBody = JSON.stringify(creds);
-      const resp = await $request.invokeTemplate('checkBalance', { body: credBody });
-      const balance = JSON.parse(resp.response);
-      return { success: true, balance: balance.available, raw: resp.response };
+      debug.push('step2:creds_ok:' + (creds.username ? 'has_user' : 'no_user'));
+
+      debug.push('step3:calling_balance');
+      const balanceResp = await $request.invokeTemplate('checkBalance', { body: JSON.stringify(creds) });
+      debug.push('step4:balance_resp_status:' + balanceResp.status);
+      const balance = JSON.parse(balanceResp.response);
+      debug.push('step5:balance_parsed:' + balance.result + ':' + balance.available);
+
+      debug.push('step6:calling_senderids');
+      const senderResp = await $request.invokeTemplate('getSenderIds', { body: JSON.stringify(creds) });
+      const senders = JSON.parse(senderResp.response);
+      debug.push('step7:senders:' + (senders.senderid || []).length);
+
+      debug.push('step8:calling_coverage');
+      const coverageResp = await $request.invokeTemplate('getCoverage', { body: JSON.stringify(creds) });
+      const coverage = JSON.parse(coverageResp.response);
+      debug.push('step9:coverage:' + (coverage.prefixes || []).length);
+
+      debug.push('step10:saving_db');
+      const gateway = {
+        balance: balance.available || 0,
+        senderids: senders.senderid || [],
+        coverage: coverage.prefixes || [],
+        last_sync: new Date().toISOString()
+      };
+      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+      debug.push('step11:done');
+
+      return { success: true, balance: gateway.balance, debug: debug.join(' > ') };
     } catch (err) {
-      return { success: false, message: formatError(err) };
+      debug.push('ERROR:' + formatError(err));
+      return { success: false, message: formatError(err), debug: debug.join(' > ') };
     }
   },
 

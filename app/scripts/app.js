@@ -804,14 +804,14 @@
       state.client.request.invoke('syncGateway', {}).then(function (result) {
         const resp = result && result.response ? (typeof result.response === 'string' ? JSON.parse(result.response) : result.response) : {};
         if (resp.success) {
-          showToast('Gateway synced. Balance: ' + resp.balance, 'success');
+          showTestFeedback('Synced! Balance: ' + resp.balance + ' | Debug: ' + (resp.debug || 'none'), 'success');
         } else {
-          showToast('Sync failed: ' + (resp.message || 'Unknown error'), 'error');
+          showTestFeedback('Failed: ' + (resp.message || 'Unknown') + ' | Debug: ' + (resp.debug || 'none'), 'error');
         }
         loadSettings();
         loadDashboard();
       }).catch(function (err) {
-        showToast('Sync failed: ' + (err.message || JSON.stringify(err)), 'error');
+        showTestFeedback('Catch: ' + (err.message || JSON.stringify(err)), 'error');
       }).finally(function () {
         if (btn) btn.disabled = false;
       });
