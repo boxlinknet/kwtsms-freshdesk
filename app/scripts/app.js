@@ -233,7 +233,11 @@
   function dbGet(key) {
     if (!state.client) return Promise.resolve(null);
     return state.client.db.get(key).then(function (result) {
-      const raw = result[key];
+      let raw = result[key];
+      // Unwrap { data: "..." } wrapper from serverless $db.set
+      if (raw && typeof raw === 'object' && raw.data) {
+        raw = raw.data;
+      }
       if (typeof raw === 'string') {
         try { return JSON.parse(raw); } catch (e) { return raw; }
       }
