@@ -255,54 +255,54 @@
 
       <!-- ==================== TEMPLATES ==================== -->
       <section id="tab-templates" class="tab-panel" role="tabpanel">
-        <!-- Event Type Pills -->
-        <div class="pill-nav" id="template-pills">
-          <button class="pill-btn active" data-event="ticket_created">Ticket Created</button>
-          <button class="pill-btn" data-event="status_changed">Status Changed</button>
-          <button class="pill-btn" data-event="agent_reply">Agent Reply</button>
-          <button class="pill-btn" data-event="admin_new_ticket">New Ticket (Admin)</button>
-          <button class="pill-btn" data-event="admin_high_priority">High Priority (Admin)</button>
-          <button class="pill-btn" data-event="admin_escalation">Escalation (Admin)</button>
-        </div>
-
-        <!-- Template Editor -->
-        <div class="template-editor">
-          <div class="template-col">
-            <div class="template-header">
-              <span class="template-lang-label">English</span>
-              <span class="char-counter" id="counter-en">0 chars / 1 SMS</span>
-            </div>
-            <textarea id="template-en" class="form-textarea template-textarea" rows="5" dir="ltr"></textarea>
-          </div>
-          <div class="template-col">
-            <div class="template-header">
-              <span class="template-lang-label">Arabic</span>
-              <span class="char-counter" id="counter-ar">0 chars / 1 SMS</span>
-            </div>
-            <textarea id="template-ar" class="form-textarea template-textarea" rows="5" dir="rtl"></textarea>
-          </div>
-        </div>
-
-        <!-- Placeholders -->
         <div class="section-block">
-          <h3 class="section-subtitle">Available Placeholders</h3>
-          <div class="placeholder-chips" id="placeholder-chips">
-            <span class="chip" data-placeholder="{{ticket_id}}">ticket_id</span>
-            <span class="chip" data-placeholder="{{ticket_subject}}">ticket_subject</span>
-            <span class="chip" data-placeholder="{{ticket_status}}">ticket_status</span>
-            <span class="chip" data-placeholder="{{ticket_priority}}">ticket_priority</span>
-            <span class="chip" data-placeholder="{{requester_name}}">requester_name</span>
-            <span class="chip" data-placeholder="{{requester_email}}">requester_email</span>
-            <span class="chip" data-placeholder="{{agent_name}}">agent_name</span>
-            <span class="chip" data-placeholder="{{company_name}}">company_name</span>
+          <!-- Event Type Pills -->
+          <div class="pill-nav" id="template-pills" style="margin-block-end: 16px;">
+            <button class="pill-btn active" data-event="ticket_created">Ticket Created</button>
+            <button class="pill-btn" data-event="status_changed">Status Changed</button>
+            <button class="pill-btn" data-event="agent_reply">Agent Reply</button>
+            <button class="pill-btn" data-event="admin_new_ticket">New Ticket (Admin)</button>
+            <button class="pill-btn" data-event="admin_high_priority">High Priority (Admin)</button>
+            <button class="pill-btn" data-event="admin_escalation">Escalation (Admin)</button>
           </div>
-        </div>
 
-        <!-- Template Actions -->
-        <div class="section-block">
-          <div class="button-row">
-            <button class="btn btn-ghost" id="btn-template-reset">Reset to Default</button>
+          <!-- Template Editor -->
+          <div class="template-editor" style="margin-block-end: 16px;">
+            <div class="template-col">
+              <div class="template-header">
+                <span class="template-lang-label">English</span>
+                <span class="char-counter" id="counter-en">0 chars / 1 SMS</span>
+              </div>
+              <textarea id="template-en" class="form-textarea template-textarea" rows="5" dir="ltr"></textarea>
+            </div>
+            <div class="template-col">
+              <div class="template-header">
+                <span class="template-lang-label">Arabic</span>
+                <span class="char-counter" id="counter-ar">0 chars / 1 SMS</span>
+              </div>
+              <textarea id="template-ar" class="form-textarea template-textarea" rows="5" dir="rtl"></textarea>
+            </div>
+          </div>
+
+          <!-- Placeholders -->
+          <div style="margin-block-end: 16px;">
+            <h3 class="section-subtitle">Available Placeholders</h3>
+            <div class="placeholder-chips" id="placeholder-chips">
+              <span class="chip" data-placeholder="{{ticket_id}}">ticket_id</span>
+              <span class="chip" data-placeholder="{{ticket_subject}}">ticket_subject</span>
+              <span class="chip" data-placeholder="{{ticket_status}}">ticket_status</span>
+              <span class="chip" data-placeholder="{{ticket_priority}}">ticket_priority</span>
+              <span class="chip" data-placeholder="{{requester_name}}">requester_name</span>
+              <span class="chip" data-placeholder="{{requester_email}}">requester_email</span>
+              <span class="chip" data-placeholder="{{agent_name}}">agent_name</span>
+              <span class="chip" data-placeholder="{{company_name}}">company_name</span>
+            </div>
+          </div>
+
+          <!-- Template Actions -->
+          <div class="button-row" style="justify-content: flex-start; gap: 8px;">
             <button class="btn btn-primary" id="btn-template-save">Save Templates</button>
+            <button class="btn btn-ghost" id="btn-template-reset">Reset to Default</button>
           </div>
         </div>
       </section>
