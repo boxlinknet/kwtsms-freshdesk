@@ -102,6 +102,10 @@ body {
   gap: 8px;
 }
 
+.header-actions .btn-sm {
+  font-size: 1rem;
+}
+
 .header-actions .btn:hover:not(:disabled) {
   background-color: rgba(255, 255, 255, 0.15);
   color: #fff;
