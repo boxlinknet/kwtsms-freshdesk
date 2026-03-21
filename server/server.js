@@ -702,6 +702,7 @@ async function loadAdminAlerts() {
 // ======================================================================
 
 async function sendCustomerTicketCreated(ctx, payload, templates, settings, placeholders, ticketId) {
+  if (settings.notify_ticket_created === false) return;
   const customerPhone = payload.requester?.phone;
   if (!customerPhone) return;
   const message = resolveTemplate(templates, SMS_EVENT.TICKET_CREATED, settings.language, placeholders);
@@ -728,6 +729,7 @@ async function sendAdminHighPriority(ctx, payload, templates, settings, placehol
 }
 
 async function sendStatusChanged(ctx, payload, changes, templates, settings, placeholders, ticketId) {
+  if (settings.notify_status_changed === false) return;
   if (!changes.status) return;
   const newStatus = Array.isArray(changes.status) ? changes.status[1] : changes.status;
   if (newStatus !== TICKET_STATUS.RESOLVED && newStatus !== TICKET_STATUS.CLOSED) return;
@@ -853,6 +855,7 @@ function isPublicAgentReply(conversation) {
 }
 
 async function sendAgentReply(args, payload, settings) {
+  if (settings.notify_agent_reply === false) return;
   const credentials = getCredentials(args);
   const templates = await loadTemplates();
   const placeholders = buildPlaceholderData({ data: payload }, settings.company_name || '', settings.language);

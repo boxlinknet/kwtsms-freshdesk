@@ -21,6 +21,7 @@
         <button id="btn-lang-toggle" class="btn btn-ghost btn-sm" title="Toggle Language Direction">
           <span id="lang-toggle-label">&#x0639;&#x0631;&#x0628;&#x064A;</span>
         </button>
+        <a href="https://www.kwtsms.com/account/" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Go to kwtSMS dashboard to recharge credits, buy sender IDs, or manage your account">kwtSMS Dashboard &#x2197;</a>
       </div>
     </header>
 
@@ -28,9 +29,9 @@
     <nav class="tab-nav" role="tablist">
       <button class="tab-btn active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
       <button class="tab-btn" data-tab="settings" role="tab" aria-selected="false">Settings</button>
+      <button class="tab-btn" data-tab="admin-alerts" role="tab" aria-selected="false">Notifications</button>
       <button class="tab-btn" data-tab="templates" role="tab" aria-selected="false">Templates</button>
       <button class="tab-btn" data-tab="logs" role="tab" aria-selected="false">Logs</button>
-      <button class="tab-btn" data-tab="admin-alerts" role="tab" aria-selected="false">Admin Alerts</button>
       <button class="tab-btn" data-tab="help" role="tab" aria-selected="false">Help</button>
     </nav>
 
@@ -382,28 +383,55 @@
         </div>
       </section>
 
-      <!-- ==================== ADMIN ALERTS ==================== -->
+      <!-- ==================== NOTIFICATIONS ==================== -->
       <section id="tab-admin-alerts" class="tab-panel" role="tabpanel">
-        <!-- Recipients -->
+        <!-- Customer Notifications -->
         <div class="section-block">
-          <h2 class="section-title">Alert Recipients</h2>
-          <div class="phone-input-row">
-            <input type="tel" id="alert-phone-input" class="form-input" placeholder="+965XXXXXXXX">
-            <button class="btn btn-primary btn-sm" id="btn-alert-add">Add</button>
+          <h2 class="section-title">Customer Notifications</h2>
+          <p class="setting-desc" style="margin-block-end: 12px;">SMS notifications sent to ticket requesters</p>
+          <div class="settings-list">
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Ticket created</span>
+                <span class="setting-desc">Send SMS when a new ticket is created</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="notify-ticket-created" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Status changed</span>
+                <span class="setting-desc">Send SMS when ticket is resolved or closed</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="notify-status-changed" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-label">Agent reply</span>
+                <span class="setting-desc">Send SMS when an agent replies to the ticket</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="notify-agent-reply" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
           </div>
-          <ul class="phone-list" id="alert-phone-list">
-            <!-- Phone items rendered by JS -->
-          </ul>
-          <p class="empty-message" id="alert-phones-empty">No alert recipients configured</p>
         </div>
 
-        <!-- Alert Events -->
+        <!-- Admin Alerts -->
         <div class="section-block">
-          <h2 class="section-title">Alert Events</h2>
+          <h2 class="section-title">Admin Alerts</h2>
+          <p class="setting-desc" style="margin-block-end: 12px;">SMS alerts sent to admin phone numbers below</p>
           <div class="settings-list">
             <div class="setting-row">
               <div class="setting-info">
                 <span class="setting-label">New ticket created</span>
+                <span class="setting-desc">Alert admins when a new ticket comes in</span>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" id="alert-new-ticket" checked>
@@ -413,6 +441,7 @@
             <div class="setting-row">
               <div class="setting-info">
                 <span class="setting-label">High/Urgent priority ticket</span>
+                <span class="setting-desc">Alert admins on high or urgent priority tickets</span>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" id="alert-high-priority" checked>
@@ -422,6 +451,7 @@
             <div class="setting-row">
               <div class="setting-info">
                 <span class="setting-label">Priority escalation</span>
+                <span class="setting-desc">Alert admins when a ticket is escalated to high/urgent</span>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" id="alert-escalation" checked>
@@ -429,6 +459,19 @@
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Admin Recipients -->
+        <div class="section-block">
+          <h2 class="section-title">Admin Recipients</h2>
+          <div class="phone-input-row">
+            <input type="tel" id="alert-phone-input" class="form-input" placeholder="e.g. 96598765432">
+            <button class="btn btn-primary btn-sm" id="btn-alert-add">Add</button>
+          </div>
+          <ul class="phone-list" id="alert-phone-list">
+            <!-- Phone items rendered by JS -->
+          </ul>
+          <p class="empty-message" id="alert-phones-empty">No admin recipients configured</p>
         </div>
       </section>
 

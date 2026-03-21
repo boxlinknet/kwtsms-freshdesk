@@ -1253,12 +1253,21 @@
       });
     }
 
-    // Auto-save alert toggles on change
+    // Auto-save admin alert toggles on change
     const alertToggles = ['alert-new-ticket', 'alert-high-priority', 'alert-escalation'];
     for (let i = 0; i < alertToggles.length; i++) {
       const toggle = document.getElementById(alertToggles[i]);
       if (toggle) {
         toggle.addEventListener('change', handleSaveAlerts);
+      }
+    }
+
+    // Auto-save customer notification toggles on change
+    const notifyToggles = ['notify-ticket-created', 'notify-status-changed', 'notify-agent-reply'];
+    for (let j = 0; j < notifyToggles.length; j++) {
+      const toggle = document.getElementById(notifyToggles[j]);
+      if (toggle) {
+        toggle.addEventListener('change', handleSaveCustomerNotifications);
       }
     }
   }
@@ -1267,6 +1276,10 @@
    * Load admin alerts from Data Storage.
    */
   function loadAdminAlerts() {
+    // Load customer notifications from settings
+    loadCustomerNotifications();
+
+    // Load admin alerts
     dbGet(DS_KEYS.ADMIN_ALERTS).then(function (alerts) {
       state.currentAdminAlerts = alerts || Object.assign({}, DEFAULT_ADMIN_ALERTS);
       renderAlertPhones();
@@ -1399,11 +1412,32 @@
       escalation: getCheckbox('alert-escalation')
     };
 
-    dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).then(function () {
-      showToast('Admin alerts saved', 'success');
-    }).catch(function () {
+    dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).catch(function () {
       showToast('Failed to save admin alerts', 'error');
     });
+  }
+
+  /**
+   * Save customer notification toggles to settings.
+   */
+  function handleSaveCustomerNotifications() {
+    if (!state.currentSettings) return;
+    state.currentSettings.notify_ticket_created = getCheckbox('notify-ticket-created');
+    state.currentSettings.notify_status_changed = getCheckbox('notify-status-changed');
+    state.currentSettings.notify_agent_reply = getCheckbox('notify-agent-reply');
+    dbSet(DS_KEYS.SETTINGS, state.currentSettings).catch(function () {
+      showToast('Failed to save notification settings', 'error');
+    });
+  }
+
+  /**
+   * Load customer notification toggles from settings.
+   */
+  function loadCustomerNotifications() {
+    if (!state.currentSettings) return;
+    setCheckbox('notify-ticket-created', state.currentSettings.notify_ticket_created !== false);
+    setCheckbox('notify-status-changed', state.currentSettings.notify_status_changed !== false);
+    setCheckbox('notify-agent-reply', state.currentSettings.notify_agent_reply !== false);
   }
 
   // ──────────────────────────────────────────────
