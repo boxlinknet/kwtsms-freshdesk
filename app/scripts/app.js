@@ -715,6 +715,12 @@
     setText('info-gw-last-sync', formatDate(gw.last_sync));
     populateSenderDropdown(gw.senderids || []);
     populateCountryCodeDropdown(gw.coverage || []);
+    // Show username from iparams
+    if (state.client && state.client.iparams) {
+      state.client.iparams.get('kwtsms_username').then(function (iparams) {
+        setText('info-gw-username', iparams.kwtsms_username || '--');
+      }).catch(function () { /* ignored */ });
+    }
   }
 
   /**

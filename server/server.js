@@ -627,8 +627,14 @@ async function sendBatch(credentials, mobile, message, sender, test) {
     });
     return JSON.parse(response.response);
   } catch (err) {
-    console.error('[kwtsms] API call failed:', err.message);
-    return { result: 'ERROR', code: 'NETWORK', description: err.message };
+    // FDK may throw with the response body inside the error
+    if (err && err.response) {
+      try { return JSON.parse(err.response); } catch (e) { /* fall through */ }
+    }
+    if (err && err.message) {
+      try { const parsed = JSON.parse(err.message); if (parsed.result) return parsed; } catch (e) { /* fall through */ }
+    }
+    return { result: 'ERROR', code: 'ERR', description: (err && err.message) || String(err) };
   }
 }
 

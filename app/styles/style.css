@@ -116,14 +116,20 @@ body {
   display: flex;
   gap: 0;
   border-block-end: 2px solid var(--color-border);
-  margin-block-end: 24px;
+  margin-block-end: 16px;
   overflow-x: auto;
+  overflow-y: hidden;
   flex-wrap: nowrap;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tab-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
-  padding: 12px 20px;
+  padding: 8px 14px;
   border: none;
   background: none;
   color: var(--color-text-secondary);
