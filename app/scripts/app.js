@@ -700,6 +700,12 @@
         populateCountryCodeDropdown(gw.coverage || []);
       }
     }).catch(function () { /* ignored */ });
+
+    // Set default test message with timestamp
+    const testMsg = document.getElementById('test-message');
+    if (testMsg && !testMsg.value) {
+      testMsg.value = 'kwtSMS gateway test - ' + new Date().toISOString().replace('T', ' ').substring(0, 19);
+    }
   }
 
   /**

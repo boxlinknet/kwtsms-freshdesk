@@ -215,19 +215,15 @@
         <!-- Gateway Test -->
         <div class="section-block">
           <h2 class="section-title">Gateway Test</h2>
-          <p class="setting-desc" style="margin-block-end: 12px;">Send a test SMS to verify your gateway is working. Uses the full send pipeline: number normalization, validation, coverage check, message cleaning, and deduplication.</p>
           <div class="form-group">
-            <label class="form-label" for="test-phone">Phone Number</label>
-            <input type="text" id="test-phone" class="form-input" placeholder="e.g. 96598765432" style="max-width: 300px;">
+            <label class="form-label" for="test-phone">Phone Numbers (comma separated)</label>
+            <input type="text" id="test-phone" class="form-input" placeholder="e.g. 96598765432, 96512345678" style="max-width: 400px;">
           </div>
           <div class="form-group">
             <label class="form-label" for="test-message">Message</label>
-            <textarea id="test-message" class="form-textarea" rows="3" style="max-width: 500px;">This is a test SMS from kwtSMS for Freshdesk.</textarea>
+            <textarea id="test-message" class="form-textarea" rows="2" style="max-width: 500px;"></textarea>
           </div>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <button class="btn btn-primary" id="btn-send-test">Send Test SMS</button>
-            <span class="setting-desc">Sends with test=1. Message is queued but not delivered.</span>
-          </div>
+          <button class="btn btn-primary" id="btn-send-test">Send Test SMS</button>
         </div>
 
         <!-- Test SMS Modal -->
