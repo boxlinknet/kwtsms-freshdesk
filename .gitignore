@@ -3,6 +3,13 @@
 node_modules/
 dist/
 *.zip
+server/test_data/
+coverage/
+.report.json
+
+# Tests
+test/
+tests/
 
 # IDE
 .idea/
@@ -22,14 +29,7 @@ docs/
 napkin.md
 .superpowers/
 .worktrees/
+.playwright*
 docker/
 research/
-.report.json
-.playwright-cli/
-.playwright/
-coverage/
 *.yaml
-test/
-tests/
-server/test_data/
-dist/
