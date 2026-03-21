@@ -36,6 +36,7 @@
     debug: false,
     language: 'en',
     active_sender_id: 'KWT-SMS',
+    default_country_code: '965',
     company_name: '',
     schema_version: 1
   };
@@ -90,18 +91,32 @@
    * Initialize the Freshworks client SDK and boot the app.
    */
   document.addEventListener('DOMContentLoaded', function () {
+    let booted = false;
+    function bootOnce() {
+      if (booted) return;
+      booted = true;
+      bootApp();
+    }
+
     if (typeof app !== 'undefined' && app.initialized) {
+      // Timeout fallback: if SDK hangs, boot in dev mode after 3s
+      const timeout = setTimeout(function () {
+        console.warn('[kwtsms] FDK init timed out, running in dev mode');
+        bootOnce();
+      }, 3000);
+
       app.initialized().then(function (_client) {
+        clearTimeout(timeout);
         state.client = _client;
-        bootApp();
-      }).catch(function (err) {
-        console.error('[kwtsms] FDK init failed:', err);
-        showToast('Failed to initialize app. Please reload.', 'error');
+        bootOnce();
+      }).catch(function () {
+        clearTimeout(timeout);
+        console.warn('[kwtsms] FDK init failed, running in dev mode');
+        bootOnce();
       });
     } else {
-      // Development fallback (no FDK)
       console.warn('[kwtsms] FDK not available, running in dev mode');
-      bootApp();
+      bootOnce();
     }
   });
 
@@ -207,7 +222,7 @@
         document.documentElement.setAttribute('dir', state.isRTL ? 'rtl' : 'ltr');
         const label = document.getElementById('lang-toggle-label');
         if (label) {
-          label.textContent = state.isRTL ? 'EN' : 'AR';
+          label.textContent = state.isRTL ? 'English' : '\u0639\u0631\u0628\u064A';
         }
       });
     }
@@ -641,6 +656,7 @@
     // Dropdowns
     addSelectListener('setting-language', function (val) { saveSettingField('language', val); });
     addSelectListener('setting-sender-id', function (val) { saveSettingField('active_sender_id', val); });
+    addSelectListener('setting-country-code', function (val) { saveSettingField('default_country_code', val); });
 
     // Sync Now button
     const syncBtn = document.getElementById('btn-sync-now');
@@ -689,8 +705,45 @@
 
         // Populate sender ID dropdown
         populateSenderDropdown(gw.senderids || []);
+        // Populate country code dropdown from coverage
+        populateCountryCodeDropdown(gw.coverage || []);
       }
     }).catch(function () { /* ignored */ });
+  }
+
+  /**
+   * Populate the default country code dropdown from coverage data.
+   */
+  function populateCountryCodeDropdown(coverage) {
+    const select = document.getElementById('setting-country-code');
+    if (!select || coverage.length === 0) return;
+
+    // Keep the first "Select country" option
+    while (select.options.length > 1) {
+      select.removeChild(select.lastChild);
+    }
+
+    // Common country code labels
+    const COUNTRY_NAMES = {
+      '965': 'Kuwait (+965)', '966': 'Saudi Arabia (+966)', '971': 'UAE (+971)',
+      '973': 'Bahrain (+973)', '974': 'Qatar (+974)', '968': 'Oman (+968)',
+      '962': 'Jordan (+962)', '961': 'Lebanon (+961)', '20': 'Egypt (+20)',
+      '964': 'Iraq (+964)', '1': 'USA/Canada (+1)', '44': 'UK (+44)',
+      '91': 'India (+91)', '92': 'Pakistan (+92)', '63': 'Philippines (+63)'
+    };
+
+    for (let i = 0; i < coverage.length; i++) {
+      const code = String(coverage[i]);
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = COUNTRY_NAMES[code] || '+' + code;
+      select.appendChild(opt);
+    }
+
+    // Restore saved value
+    if (state.currentSettings && state.currentSettings.default_country_code) {
+      select.value = state.currentSettings.default_country_code;
+    }
   }
 
   /**
