@@ -11,7 +11,7 @@ kwtSMS for Freshdesk integrates the [kwtSMS](https://www.kwtsms.com) SMS gateway
 ## Features
 
 - **Automatic SMS notifications** for customers on ticket creation, status changes, and agent replies
-- **Admin SMS alerts** on new tickets, high-priority tickets, and priority escalations
+- **Admin SMS notifications** on new tickets, high-priority tickets, and priority escalations
 - **Ticket sidebar** for agents to send manual SMS directly from any ticket
 - **English and Arabic support** with RTL layout and bilingual SMS templates
 - **Smart send pipeline** with phone normalization, validation, coverage check, HTML/emoji cleaning, deduplication, and batch sending
