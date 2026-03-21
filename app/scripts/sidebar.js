@@ -255,6 +255,7 @@
     // Normalize phone for Entity Store query
     const normalizedPhone = state.contactPhone.replace(/\D/g, '').replace(/^0+/, '');
 
+    if (!state.client.db || !state.client.db.entity) return;
     state.client.db.entity.getAll('sms_log', {
       filter: { recipient_phone: normalizedPhone },
       page_size: 5
