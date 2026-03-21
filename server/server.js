@@ -1043,7 +1043,7 @@ exports = {
     }
   },
 
-  debugRead: async function(args) {
+  debugRead: async function() {
     try {
       const gw = await $db.get(DS_KEYS.GATEWAY);
       const settings = await $db.get(DS_KEYS.SETTINGS);

@@ -118,6 +118,7 @@ body {
   border-block-end: 2px solid var(--color-border);
   margin-block-end: 24px;
   overflow-x: auto;
+  flex-wrap: nowrap;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -326,6 +327,7 @@ body {
 /* ---------- Data Table ---------- */
 .table-wrap {
   overflow-x: auto;
+  flex-wrap: nowrap;
   -webkit-overflow-scrolling: touch;
 }
 
