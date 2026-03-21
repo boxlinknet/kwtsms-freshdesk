@@ -256,6 +256,7 @@
       <!-- ==================== TEMPLATES ==================== -->
       <section id="tab-templates" class="tab-panel" role="tabpanel">
         <div class="section-block">
+          <h2 class="section-title">SMS Templates</h2>
           <!-- Event Type Pills -->
           <div class="pill-nav" id="template-pills" style="margin-block-end: 16px;">
             <button class="pill-btn active" data-event="ticket_created">Ticket Created</button>
@@ -309,60 +310,73 @@
 
       <!-- ==================== LOGS ==================== -->
       <section id="tab-logs" class="tab-panel" role="tabpanel">
-        <!-- Filters -->
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label class="form-label" for="log-filter-event">Event Type</label>
-            <select id="log-filter-event" class="form-select">
-              <option value="">All Events</option>
-              <option value="ticket_created">Ticket Created</option>
-              <option value="status_changed">Status Changed</option>
-              <option value="agent_reply">Agent Reply</option>
-              <option value="admin_new_ticket">New Ticket (Admin)</option>
-              <option value="admin_high_priority">High Priority (Admin)</option>
-              <option value="admin_escalation">Escalation (Admin)</option>
-              <option value="manual_send">Manual Send</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label class="form-label" for="log-filter-status">Status</label>
-            <select id="log-filter-status" class="form-select">
-              <option value="">All Status</option>
-              <option value="sent">Sent</option>
-              <option value="failed">Failed</option>
-            </select>
-          </div>
-          <div class="filter-actions">
+        <!-- SMS Logs Card -->
+        <div class="section-block">
+          <h2 class="section-title">SMS Logs</h2>
+          <!-- Filters -->
+          <div style="display: flex; gap: 16px; margin-block-end: 16px; flex-wrap: wrap; align-items: flex-end;">
+            <div class="filter-group">
+              <label class="form-label" for="log-filter-event">Event Type</label>
+              <select id="log-filter-event" class="form-select">
+                <option value="">All Events</option>
+                <option value="ticket_created">Ticket Created</option>
+                <option value="status_changed">Status Changed</option>
+                <option value="agent_reply">Agent Reply</option>
+                <option value="admin_new_ticket">New Ticket (Admin)</option>
+                <option value="admin_high_priority">High Priority (Admin)</option>
+                <option value="admin_escalation">Escalation (Admin)</option>
+                <option value="manual_send">Manual Send</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label class="form-label" for="log-filter-status">Status</label>
+              <select id="log-filter-status" class="form-select">
+                <option value="">All Status</option>
+                <option value="sent">Sent</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
             <button class="btn btn-secondary btn-sm" id="btn-log-filter">Filter</button>
+          </div>
+
+          <!-- Log Table -->
+          <div class="table-wrap">
+            <table class="data-table" id="log-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Event</th>
+                  <th>Recipient</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="log-table-body">
+                <tr class="empty-row">
+                  <td colspan="5">No SMS logs yet</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" id="log-pagination">
+            <button class="btn btn-ghost btn-sm" id="btn-log-prev" disabled>Previous</button>
+            <span class="pagination-info" id="log-page-info">Page 1</span>
+            <button class="btn btn-ghost btn-sm" id="btn-log-next" disabled>Next</button>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="section-block" style="border-color: var(--color-error); border-style: dashed;">
+          <h2 class="section-title" style="color: var(--color-error);">Danger Zone</h2>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <span class="setting-label">Clear all SMS logs</span>
+              <p class="setting-desc">Permanently delete all SMS log entries. This cannot be undone.</p>
+            </div>
             <button class="btn btn-danger btn-sm" id="btn-log-clear">Clear Logs</button>
           </div>
-        </div>
-
-        <!-- Log Table -->
-        <div class="table-wrap">
-          <table class="data-table" id="log-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Event</th>
-                <th>Recipient</th>
-                <th>Message</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="log-table-body">
-              <tr class="empty-row">
-                <td colspan="5">No SMS logs yet</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination" id="log-pagination">
-          <button class="btn btn-ghost btn-sm" id="btn-log-prev" disabled>Previous</button>
-          <span class="pagination-info" id="log-page-info">Page 1</span>
-          <button class="btn btn-ghost btn-sm" id="btn-log-next" disabled>Next</button>
         </div>
 
         <!-- Clear Logs Confirmation Modal -->
