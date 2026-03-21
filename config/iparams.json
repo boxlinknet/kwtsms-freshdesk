@@ -3,8 +3,7 @@
     "display_name": "kwtSMS API Username",
     "description": "Your kwtSMS API username (not your mobile number)",
     "type": "text",
-    "required": true,
-    "secure": true
+    "required": true
   },
   "kwtsms_password": {
     "display_name": "kwtSMS API Password",
