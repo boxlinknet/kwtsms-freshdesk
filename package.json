@@ -1,6 +1,6 @@
 {
   "name": "kwtsms-freshdesk",
-  "version": "0.5.0",
+  "version": "1.0.5",
   "description": "kwtSMS SMS Gateway integration for Freshdesk",
   "main": "server/server.js",
   "scripts": {

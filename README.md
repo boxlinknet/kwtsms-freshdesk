@@ -1,6 +1,6 @@
 # kwtSMS for Freshdesk
 
-[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)](https://github.com/boxlinknet/kwtsms-freshdesk/releases/tag/v0.7.0)
+[![Version](https://img.shields.io/badge/version-1.0.5-blue.svg)](https://github.com/boxlinknet/kwtsms-freshdesk/releases/tag/v1.0.5)
 [![Platform](https://img.shields.io/badge/platform-Freshdesk-green.svg)](https://www.freshworks.com/apps/)
 [![FDK](https://img.shields.io/badge/FDK-v2.3-orange.svg)](https://developers.freshworks.com/docs/app-sdk/v2.3/freshdesk/)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE)
@@ -49,7 +49,7 @@ kwtSMS for Freshdesk integrates the [kwtSMS](https://www.kwtsms.com) SMS gateway
 
 ## Version
 
-0.7.0
+1.0.5
 
 ## License
 
