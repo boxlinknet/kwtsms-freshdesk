@@ -235,15 +235,25 @@
     if (!state.client) return Promise.resolve(null);
     return state.client.db.get(key).then(function (result) {
       let raw = result[key];
+      console.log('[kwtsms] dbGet ' + key + ' raw type:', typeof raw, raw);
       // Unwrap { data: "..." } wrapper from serverless $db.set
-      if (raw && typeof raw === 'object' && raw.data) {
+      if (raw && typeof raw === 'object' && typeof raw.data === 'string') {
         raw = raw.data;
       }
       if (typeof raw === 'string') {
-        try { return JSON.parse(raw); } catch (e) { return raw; }
+        try {
+          let parsed = JSON.parse(raw);
+          // Double unwrap: if parsed result also has { data: "string" }
+          if (parsed && typeof parsed === 'object' && typeof parsed.data === 'string') {
+            try { parsed = JSON.parse(parsed.data); } catch (e2) { /* keep parsed */ }
+          }
+          console.log('[kwtsms] dbGet ' + key + ' parsed:', parsed);
+          return parsed;
+        } catch (e) { return raw; }
       }
       return raw || null;
-    }).catch(function () {
+    }).catch(function (err) {
+      console.log('[kwtsms] dbGet ' + key + ' error:', err);
       return null;
     });
   }
@@ -266,7 +276,7 @@
    * @returns {Promise<Object>} Query result
    */
   function entityGetAll(entity, opts) {
-    if (!state.client || !state.client.db || !state.client.db.entity) return Promise.resolve({ records: [], next: null });
+    if (!state.client || !state.client.db || !state.client.db.entity || typeof state.client.db.entity.getAll !== 'function') return Promise.resolve({ records: [], next: null });
     const params = opts || {};
     return state.client.db.entity.getAll(entity, params).catch(function () {
       return { records: [], next: null };
@@ -279,7 +289,7 @@
    * @returns {Promise}
    */
   function entityDeleteAll(entity) {
-    if (!state.client || !state.client.db || !state.client.db.entity) return Promise.resolve();
+    if (!state.client || !state.client.db || !state.client.db.entity || typeof state.client.db.entity.deleteAll !== 'function') return Promise.resolve();
     return state.client.db.entity.deleteAll(entity).catch(function () {
       // Ignore errors
     });
