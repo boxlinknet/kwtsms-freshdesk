@@ -664,19 +664,10 @@
       syncBtn.addEventListener('click', handleSyncNow);
     }
 
-    // Send Test SMS button
+    // Send Test SMS button (inline form, no modal)
     const testBtn = document.getElementById('btn-send-test');
     if (testBtn) {
-      testBtn.addEventListener('click', function () {
-        showModal('modal-test-sms');
-      });
-    }
-
-    // Test SMS modal
-    setupModalClose('modal-test-sms', 'modal-test-close', 'modal-test-cancel');
-    const sendTestBtn = document.getElementById('modal-test-send');
-    if (sendTestBtn) {
-      sendTestBtn.addEventListener('click', handleSendTestSms);
+      testBtn.addEventListener('click', handleSendTestSms);
     }
   }
 
@@ -887,27 +878,25 @@
    * @param {Object} result - Invoke result
    */
   function handleTestSmsResult(result) {
-    const phoneInput = document.getElementById('test-phone');
-    const msgInput = document.getElementById('test-message');
     if (result && result.response && result.response.success !== false) {
       showToast('Test SMS sent successfully', 'success');
-      hideModal('modal-test-sms');
-      if (phoneInput) phoneInput.value = '';
-      if (msgInput) msgInput.value = '';
     } else {
       showToast('Failed to send test SMS', 'error');
     }
   }
 
   /**
-   * Handle Send Test SMS from modal.
+   * Handle Send Test SMS from inline form.
    */
   function handleSendTestSms() {
     const inputs = validateTestSmsInputs();
     if (!inputs) return;
 
-    const sendBtn = document.getElementById('modal-test-send');
-    if (sendBtn) sendBtn.disabled = true;
+    const sendBtn = document.getElementById('btn-send-test');
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+    }
 
     if (state.client && state.client.request && state.client.request.invoke) {
       state.client.request.invoke('manualSendSms', {
@@ -915,11 +904,17 @@
       }).then(handleTestSmsResult).catch(function (err) {
         showToast('Error: ' + (err.message || 'Send failed'), 'error');
       }).finally(function () {
-        if (sendBtn) sendBtn.disabled = false;
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send Test SMS';
+        }
       });
     } else {
       showToast('Cannot send: client not available', 'error');
-      if (sendBtn) sendBtn.disabled = false;
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Test SMS';
+      }
     }
   }
 
