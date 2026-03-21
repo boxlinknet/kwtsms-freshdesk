@@ -921,6 +921,15 @@
   }
 
   /**
+   * Reset the send test button to its default state.
+   */
+  function resetSendTestBtn(sendBtn) {
+    if (!sendBtn) return;
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send Test SMS';
+  }
+
+  /**
    * Handle Send Test SMS from inline form.
    */
   function handleSendTestSms() {
@@ -940,10 +949,7 @@
       invokeManualSendSms(inputs, sendBtn);
     } else {
       showTestFeedback('Cannot send: client not available', 'error');
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.textContent = 'Send Test SMS';
-      }
+      resetSendTestBtn(sendBtn);
     }
   }
 
