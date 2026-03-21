@@ -1016,6 +1016,19 @@ exports = {
     renderData();
   },
 
+  syncGateway: async function(args) {
+    try {
+      const creds = getCredentials(args);
+      const gateway = await fetchGatewayData(creds);
+      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+      log('Gateway synced. Balance: ' + gateway.balance);
+      return { success: true, balance: gateway.balance };
+    } catch (err) {
+      log('Gateway sync failed: ' + (err.message || JSON.stringify(err)));
+      return { success: false, message: err.message || 'Sync failed' };
+    }
+  },
+
   manualSendSms: async function(args) {
     const smiData = args.data || {};
     const phone = smiData.phone;

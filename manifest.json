@@ -40,7 +40,8 @@
         "validatePhone": {}
       },
       "functions": {
-        "manualSendSms": {}
+        "manualSendSms": {},
+        "syncGateway": {}
       }
     }
   },
