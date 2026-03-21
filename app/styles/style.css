@@ -93,6 +93,12 @@ body {
   gap: 8px;
 }
 
+.logo-img {
+  height: 32px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
 .logo-icon {
   font-size: 1.5rem;
   color: #fff;
