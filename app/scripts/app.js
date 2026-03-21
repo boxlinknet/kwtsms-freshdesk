@@ -91,32 +91,25 @@
    * Initialize the Freshworks client SDK and boot the app.
    */
   document.addEventListener('DOMContentLoaded', function () {
-    let booted = false;
-    function bootOnce() {
-      if (booted) return;
-      booted = true;
-      bootApp();
-    }
-
     if (typeof app !== 'undefined' && app.initialized) {
       // Timeout fallback: if SDK hangs, boot in dev mode after 3s
       const timeout = setTimeout(function () {
         console.warn('[kwtsms] FDK init timed out, running in dev mode');
-        bootOnce();
+        bootApp();
       }, 3000);
 
       app.initialized().then(function (_client) {
         clearTimeout(timeout);
         state.client = _client;
-        bootOnce();
+        bootApp();
       }).catch(function () {
         clearTimeout(timeout);
         console.warn('[kwtsms] FDK init failed, running in dev mode');
-        bootOnce();
+        bootApp();
       });
     } else {
       console.warn('[kwtsms] FDK not available, running in dev mode');
-      bootOnce();
+      bootApp();
     }
   });
 
@@ -672,6 +665,19 @@
   }
 
   /**
+   * Render gateway info fields and dropdowns from stored gateway data.
+   */
+  function renderGatewayInfo(gw) {
+    setText('info-gw-status', gw.last_sync ? 'Connected' : 'Disconnected');
+    setText('info-gw-balance', String(gw.balance || 0) + ' credits');
+    setText('info-gw-senders', gw.senderids ? gw.senderids.join(', ') : '--');
+    setText('info-gw-coverage', gw.coverage ? gw.coverage.length + ' countries' : '--');
+    setText('info-gw-last-sync', formatDate(gw.last_sync));
+    populateSenderDropdown(gw.senderids || []);
+    populateCountryCodeDropdown(gw.coverage || []);
+  }
+
+  /**
    * Load settings from Data Storage and render into the form.
    */
   function loadSettings() {
@@ -687,18 +693,7 @@
 
     // Gateway info
     dbGet(DS_KEYS.GATEWAY).then(function (gw) {
-      if (gw) {
-        setText('info-gw-status', gw.last_sync ? 'Connected' : 'Disconnected');
-        setText('info-gw-balance', String(gw.balance || 0) + ' credits');
-        setText('info-gw-senders', gw.senderids ? gw.senderids.join(', ') : '--');
-        setText('info-gw-coverage', gw.coverage ? gw.coverage.length + ' countries' : '--');
-        setText('info-gw-last-sync', formatDate(gw.last_sync));
-
-        // Populate sender ID dropdown
-        populateSenderDropdown(gw.senderids || []);
-        // Populate country code dropdown from coverage
-        populateCountryCodeDropdown(gw.coverage || []);
-      }
+      if (gw) renderGatewayInfo(gw);
     }).catch(function () { /* ignored */ });
 
     // Set default test message with timestamp
@@ -711,6 +706,25 @@
   /**
    * Populate the default country code dropdown from coverage data.
    */
+  // Common country code labels used by populateCountryCodeDropdown
+  const COUNTRY_NAMES = {
+    '965': 'Kuwait (+965)', '966': 'Saudi Arabia (+966)', '971': 'UAE (+971)',
+    '973': 'Bahrain (+973)', '974': 'Qatar (+974)', '968': 'Oman (+968)',
+    '962': 'Jordan (+962)', '961': 'Lebanon (+961)', '20': 'Egypt (+20)',
+    '964': 'Iraq (+964)', '1': 'USA/Canada (+1)', '44': 'UK (+44)',
+    '91': 'India (+91)', '92': 'Pakistan (+92)', '63': 'Philippines (+63)'
+  };
+
+  /**
+   * Create an <option> element for a country code.
+   */
+  function buildCountryOption(code) {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = COUNTRY_NAMES[code] || '+' + code;
+    return opt;
+  }
+
   function populateCountryCodeDropdown(coverage) {
     const select = document.getElementById('setting-country-code');
     if (!select || coverage.length === 0) return;
@@ -720,21 +734,8 @@
       select.removeChild(select.lastChild);
     }
 
-    // Common country code labels
-    const COUNTRY_NAMES = {
-      '965': 'Kuwait (+965)', '966': 'Saudi Arabia (+966)', '971': 'UAE (+971)',
-      '973': 'Bahrain (+973)', '974': 'Qatar (+974)', '968': 'Oman (+968)',
-      '962': 'Jordan (+962)', '961': 'Lebanon (+961)', '20': 'Egypt (+20)',
-      '964': 'Iraq (+964)', '1': 'USA/Canada (+1)', '44': 'UK (+44)',
-      '91': 'India (+91)', '92': 'Pakistan (+92)', '63': 'Philippines (+63)'
-    };
-
     for (let i = 0; i < coverage.length; i++) {
-      const code = String(coverage[i]);
-      const opt = document.createElement('option');
-      opt.value = code;
-      opt.textContent = COUNTRY_NAMES[code] || '+' + code;
-      select.appendChild(opt);
+      select.appendChild(buildCountryOption(String(coverage[i])));
     }
 
     // Restore saved value
@@ -904,6 +905,22 @@
   }
 
   /**
+   * Invoke the SMI manualSendSms request and handle the result.
+   */
+  function invokeManualSendSms(inputs, sendBtn) {
+    state.client.request.invoke('manualSendSms', {
+      data: { phone: inputs.phone, message: inputs.message }
+    }).then(handleTestSmsResult).catch(function (err) {
+      showTestFeedback('Error: ' + (err.message || 'Send failed'), 'error');
+    }).finally(function () {
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Test SMS';
+      }
+    });
+  }
+
+  /**
    * Handle Send Test SMS from inline form.
    */
   function handleSendTestSms() {
@@ -920,16 +937,7 @@
     }
 
     if (state.client && state.client.request && state.client.request.invoke) {
-      state.client.request.invoke('manualSendSms', {
-        data: { phone: inputs.phone, message: inputs.message }
-      }).then(handleTestSmsResult).catch(function (err) {
-        showTestFeedback('Error: ' + (err.message || 'Send failed'), 'error');
-      }).finally(function () {
-        if (sendBtn) {
-          sendBtn.disabled = false;
-          sendBtn.textContent = 'Send Test SMS';
-        }
-      });
+      invokeManualSendSms(inputs, sendBtn);
     } else {
       showTestFeedback('Cannot send: client not available', 'error');
       if (sendBtn) {

@@ -728,11 +728,15 @@ async function sendAdminHighPriority(ctx, payload, templates, settings, placehol
   await send({ ...ctx, phones: adminAlerts.phones, message: highMsg, eventType: SMS_EVENT.ADMIN_HIGH_PRIORITY, ticketId });
 }
 
+function isTerminalStatusChange(changes) {
+  if (!changes.status) return false;
+  const newStatus = Array.isArray(changes.status) ? changes.status[1] : changes.status;
+  return newStatus === TICKET_STATUS.RESOLVED || newStatus === TICKET_STATUS.CLOSED;
+}
+
 async function sendStatusChanged(ctx, payload, changes, templates, settings, placeholders, ticketId) {
   if (settings.notify_status_changed === false) return;
-  if (!changes.status) return;
-  const newStatus = Array.isArray(changes.status) ? changes.status[1] : changes.status;
-  if (newStatus !== TICKET_STATUS.RESOLVED && newStatus !== TICKET_STATUS.CLOSED) return;
+  if (!isTerminalStatusChange(changes)) return;
   const customerPhone = payload.requester?.phone;
   if (!customerPhone) return;
   const message = resolveTemplate(templates, SMS_EVENT.STATUS_CHANGED, settings.language, placeholders);
@@ -788,6 +792,24 @@ async function fetchGatewayData(creds) {
     coverage: coverage.prefixes || coverage.coverage || [],
     last_sync: new Date().toISOString()
   };
+}
+
+/**
+ * Perform the daily sync: fetch gateway data, persist it, and reset counters.
+ */
+async function runDailySync(args) {
+  log('Running daily sync...');
+  try {
+    const creds = getCredentials(args);
+    const gateway = await fetchGatewayData(creds);
+    await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+    await resetCounters();
+    log('Daily sync complete. Balance: ' + gateway.balance +
+        ', SenderIDs: ' + gateway.senderids.length +
+        ', Coverage: ' + gateway.coverage.length + ' countries');
+  } catch (err) {
+    console.error('[kwtsms] Daily sync failed:', err.message);
+  }
 }
 
 /** Default SMS templates written on first install. */
@@ -938,49 +960,16 @@ exports = {
   },
 
   onScheduledEventHandler: async function(args) {
-    
-    
-
     // Future-proofing: check event type
     const eventType = args.data?.type || 'daily_sync';
     if (eventType !== 'daily_sync') {
       log('Unknown scheduled event type: ' + eventType);
       return;
     }
-
-    log('Running daily sync...');
-
-    try {
-      const creds = getCredentials(args);
-      const credBody = JSON.stringify(creds);
-
-      const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
-      const balance = JSON.parse(balanceResp.response);
-
-      const senderResp = await $request.invokeTemplate('getSenderIds', { body: credBody });
-      const senders = JSON.parse(senderResp.response);
-
-      const coverageResp = await $request.invokeTemplate('getCoverage', { body: credBody });
-      const coverage = JSON.parse(coverageResp.response);
-
-      const gateway = {
-        balance: balance.available || 0,
-        senderids: senders.senderid || [],
-        coverage: coverage.prefixes || coverage.coverage || [],
-        last_sync: new Date().toISOString()
-      };
-      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-
-      // Reset daily/monthly stats counters
-      await resetCounters();
-
-      log('Daily sync complete. Balance: ' + gateway.balance +
-          ', SenderIDs: ' + gateway.senderids.length +
-          ', Coverage: ' + gateway.coverage.length + ' countries');
-    } catch (err) {
-      console.error('[kwtsms] Daily sync failed:', err.message);
-    }
+    await runDailySync(args);
   },
+
+
 
   onAppInstallHandler: async function(args) {
     log('App installed. Initializing...');
