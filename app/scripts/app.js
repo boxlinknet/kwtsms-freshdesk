@@ -234,26 +234,17 @@
   function dbGet(key) {
     if (!state.client) return Promise.resolve(null);
     return state.client.db.get(key).then(function (result) {
-      let raw = result[key];
-      console.log('[kwtsms] dbGet ' + key + ' raw type:', typeof raw, raw);
+      // result might be { key: value } or the value directly
+      let raw = (result && result[key] !== undefined) ? result[key] : result;
       // Unwrap { data: "..." } wrapper from serverless $db.set
       if (raw && typeof raw === 'object' && typeof raw.data === 'string') {
         raw = raw.data;
       }
       if (typeof raw === 'string') {
-        try {
-          let parsed = JSON.parse(raw);
-          // Double unwrap: if parsed result also has { data: "string" }
-          if (parsed && typeof parsed === 'object' && typeof parsed.data === 'string') {
-            try { parsed = JSON.parse(parsed.data); } catch (e2) { /* keep parsed */ }
-          }
-          console.log('[kwtsms] dbGet ' + key + ' parsed:', parsed);
-          return parsed;
-        } catch (e) { return raw; }
+        try { return JSON.parse(raw); } catch (e) { return raw; }
       }
       return raw || null;
-    }).catch(function (err) {
-      console.log('[kwtsms] dbGet ' + key + ' error:', err);
+    }).catch(function () {
       return null;
     });
   }
@@ -911,10 +902,12 @@
   }
 
   function handleTestSmsResult(result) {
-    if (result && result.response && result.response.success !== false) {
+    let resp = result && result.response ? result.response : {};
+    if (typeof resp === 'string') { try { resp = JSON.parse(resp); } catch (e) { /* keep */ } }
+    if (resp.success) {
       showTestFeedback('Test SMS sent successfully', 'success');
     } else {
-      showTestFeedback('Failed to send test SMS', 'error');
+      showTestFeedback(resp.message || 'Failed to send test SMS', 'error');
     }
   }
 
