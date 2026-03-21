@@ -1022,10 +1022,12 @@ exports = {
 
   syncGateway: async function(args) {
     try {
+      // Single call test to diagnose timeout
       const creds = getCredentials(args);
-      const gateway = await fetchGatewayData(creds);
-      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-      return { success: true, balance: gateway.balance };
+      const credBody = JSON.stringify(creds);
+      const resp = await $request.invokeTemplate('checkBalance', { body: credBody });
+      const balance = JSON.parse(resp.response);
+      return { success: true, balance: balance.available, raw: resp.response };
     } catch (err) {
       return { success: false, message: formatError(err) };
     }
