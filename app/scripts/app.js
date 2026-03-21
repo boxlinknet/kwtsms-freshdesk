@@ -1145,12 +1145,14 @@
    * Set up event handlers for the logs tab.
    */
   function setupLogHandlers() {
-    const filterBtn = document.getElementById('btn-log-filter');
-    if (filterBtn) {
-      filterBtn.addEventListener('click', function () {
-        state.logPage = 1;
-        loadLogs();
-      });
+    // Instant filter on dropdown change
+    const eventFilter = document.getElementById('log-filter-event');
+    if (eventFilter) {
+      eventFilter.addEventListener('change', function () { state.logPage = 1; loadLogs(); });
+    }
+    const statusFilter = document.getElementById('log-filter-status');
+    if (statusFilter) {
+      statusFilter.addEventListener('change', function () { state.logPage = 1; loadLogs(); });
     }
 
     const prevBtn = document.getElementById('btn-log-prev');

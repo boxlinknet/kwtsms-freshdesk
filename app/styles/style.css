@@ -340,6 +340,7 @@ body {
   padding: 10px 12px;
   font-weight: 600;
   color: var(--color-text-secondary);
+  background-color: var(--color-bg);
   border-block-end: 2px solid var(--color-border);
   white-space: nowrap;
   font-family: var(--font-heading);
