@@ -124,6 +124,7 @@
     setupTemplateHandlers();
     setupLogHandlers();
     setupAlertHandlers();
+    setupDebugHandlers();
     loadDashboard();
   }
 
@@ -668,6 +669,40 @@
     }
   }
 
+  // Debug handlers (temporary)
+  function setupDebugHandlers() {
+    const btnServer = document.getElementById('btn-debug-read');
+    if (btnServer) {
+      btnServer.addEventListener('click', function () {
+        const out = document.getElementById('debug-output');
+        if (out) { out.style.display = 'block'; out.textContent = 'Reading from server...'; }
+        if (state.client && state.client.request) {
+          state.client.request.invoke('debugRead', {}).then(function (result) {
+            if (out) out.textContent = 'Server $db:\n' + JSON.stringify(result.response, null, 2);
+          }).catch(function (err) {
+            if (out) out.textContent = 'Server error: ' + (err.message || JSON.stringify(err));
+          });
+        }
+      });
+    }
+    const btnFrontend = document.getElementById('btn-debug-read-frontend');
+    if (btnFrontend) {
+      btnFrontend.addEventListener('click', function () {
+        const out = document.getElementById('debug-output');
+        if (out) { out.style.display = 'block'; out.textContent = 'Reading from frontend...'; }
+        if (state.client && state.client.db) {
+          state.client.db.get('kwtsms_gateway').then(function (gw) {
+            state.client.db.get('kwtsms_settings').then(function (settings) {
+              if (out) out.textContent = 'Frontend client.db.get:\n\nkwtsms_gateway:\n' + JSON.stringify(gw, null, 2) + '\n\nkwtsms_settings:\n' + JSON.stringify(settings, null, 2);
+            });
+          }).catch(function (err) {
+            if (out) out.textContent = 'Frontend error: ' + (err.message || JSON.stringify(err));
+          });
+        }
+      });
+    }
+  }
+
   /**
    * Render gateway info fields and dropdowns from stored gateway data.
    */
@@ -808,9 +843,9 @@
       state.client.request.invoke('syncGateway', {}).then(function (result) {
         const resp = result && result.response ? (typeof result.response === 'string' ? JSON.parse(result.response) : result.response) : {};
         if (resp.success) {
-          showTestFeedback('Synced! Balance: ' + resp.balance + ' | Debug: ' + (resp.debug || 'none'), 'success');
+          showTestFeedback('Synced! Balance: ' + resp.balance + ' | Saved: ' + (resp.saved || 'none'), 'success');
         } else {
-          showTestFeedback('Failed: ' + (resp.message || 'Unknown') + ' | Debug: ' + (resp.debug || 'none'), 'error');
+          showTestFeedback('Failed: ' + (resp.message || 'Unknown'), 'error');
         }
         loadSettings();
         loadDashboard();

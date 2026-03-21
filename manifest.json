@@ -41,7 +41,8 @@
       },
       "functions": {
         "manualSendSms": {},
-        "syncGateway": {}
+        "syncGateway": {},
+        "debugRead": {}
       }
     }
   },

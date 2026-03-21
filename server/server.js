@@ -1034,9 +1034,25 @@ exports = {
       const creds = getCredentials(args);
       const gateway = await fetchGatewayData(creds);
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
-      renderData(null, { success: true, balance: gateway.balance });
+
+      // Read back to verify it was saved
+      const verify = await $db.get(DS_KEYS.GATEWAY);
+      renderData(null, { success: true, balance: gateway.balance, saved: JSON.stringify(verify).substring(0, 200) });
     } catch (err) {
       renderData(null, { success: false, message: formatError(err) });
+    }
+  },
+
+  debugRead: async function(args) {
+    try {
+      const gw = await $db.get(DS_KEYS.GATEWAY);
+      const settings = await $db.get(DS_KEYS.SETTINGS);
+      renderData(null, {
+        gateway: JSON.stringify(gw).substring(0, 300),
+        settings: JSON.stringify(settings).substring(0, 300)
+      });
+    } catch (err) {
+      renderData(null, { error: formatError(err) });
     }
   },
 
