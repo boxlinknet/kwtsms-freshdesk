@@ -821,39 +821,6 @@
     }
   }
 
-  /**
-   * Attempt a direct gateway sync using request templates.
-   * @returns {Promise}
-   */
-  function syncGatewayDirect() {
-    if (!state.client) return Promise.reject(new Error('No client'));
-
-    return state.client.iparams.get('kwtsms_username', 'kwtsms_password').then(function (iparams) {
-      const credBody = JSON.stringify({
-        username: iparams.kwtsms_username,
-        password: iparams.kwtsms_password
-      });
-
-      return Promise.all([
-        state.client.request.invokeTemplate('checkBalance', { body: credBody }),
-        state.client.request.invokeTemplate('getSenderIds', { body: credBody }),
-        state.client.request.invokeTemplate('getCoverage', { body: credBody })
-      ]);
-    }).then(function (results) {
-      const balance = JSON.parse(results[0].response);
-      const senders = JSON.parse(results[1].response);
-      const coverage = JSON.parse(results[2].response);
-
-      const gateway = {
-        balance: balance.available || 0,
-        senderids: senders.senderid || [],
-        coverage: coverage.coverage || [],
-        last_sync: new Date().toISOString()
-      };
-
-      return dbSet(DS_KEYS.GATEWAY, gateway);
-    });
-  }
 
   /**
    * Validate test SMS inputs and return phone/message or null.
