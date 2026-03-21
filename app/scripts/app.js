@@ -1253,9 +1253,13 @@
       });
     }
 
-    const saveBtn = document.getElementById('btn-alert-save');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', handleSaveAlerts);
+    // Auto-save alert toggles on change
+    const alertToggles = ['alert-new-ticket', 'alert-high-priority', 'alert-escalation'];
+    for (let i = 0; i < alertToggles.length; i++) {
+      const toggle = document.getElementById(alertToggles[i]);
+      if (toggle) {
+        toggle.addEventListener('change', handleSaveAlerts);
+      }
     }
   }
 
