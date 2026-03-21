@@ -852,6 +852,32 @@ function isPublicAgentReply(conversation) {
   return conversation.incoming === false && conversation.private === false;
 }
 
+async function sendAgentReply(args, payload, settings) {
+  const credentials = getCredentials(args);
+  const templates = await loadTemplates();
+  const placeholders = buildPlaceholderData({ data: payload }, settings.company_name || '', settings.language);
+  const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
+  if (!message) return;
+  await send({
+    credentials: credentials,
+    phones: [payload.requester.phone],
+    message: message,
+    eventType: SMS_EVENT.AGENT_REPLY,
+    ticketId: payload.ticket?.id
+  });
+}
+
+function buildInstallSettings(gateway, domain) {
+  const companyName = domain ? domain.split('.')[0] : '';
+  const activeSenderId = (gateway.senderids && gateway.senderids.length > 0)
+    ? gateway.senderids[0]
+    : 'KWT-SMS';
+  return Object.assign({}, DEFAULT_SETTINGS, {
+    company_name: companyName,
+    active_sender_id: activeSenderId
+  });
+}
+
 // ======================================================================
 // EXPORTS (FDK serverless pattern - inline function syntax)
 // ======================================================================
@@ -899,31 +925,13 @@ exports = {
 
   onConversationCreateHandler: async function(args) {
     const payload = args.data;
-    const conversation = payload.conversation || {};
-
-    // Only send on public agent replies (not private notes, not customer messages, not forwards)
-    if (!isPublicAgentReply(conversation)) return;
+    if (!isPublicAgentReply(payload.conversation || {})) return;
+    if (!payload.requester?.phone) return;
 
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
-    const customerPhone = payload.requester?.phone;
-    if (!customerPhone) return;
-
-    const credentials = getCredentials(args);
-    const templates = await loadTemplates();
-    const companyName = settings.company_name || '';
-    const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
-    const message = resolveTemplate(templates, SMS_EVENT.AGENT_REPLY, settings.language, placeholders);
-    if (!message) return;
-
-    await send({
-      credentials: credentials,
-      phones: [customerPhone],
-      message: message,
-      eventType: SMS_EVENT.AGENT_REPLY,
-      ticketId: payload.ticket?.id
-    });
+    await sendAgentReply(args, payload, settings);
   },
 
   onScheduledEventHandler: async function(args) {
@@ -979,20 +987,8 @@ exports = {
       const gateway = await fetchGatewayData(creds);
       await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
 
-      // Derive default company_name from Freshdesk domain
       const domain = (args.data && args.data.domain) || '';
-      const companyName = domain ? domain.split('.')[0] : '';
-
-      // Pick first available sender ID from gateway, fallback to KWT-SMS
-      const activeSenderId = (gateway.senderids && gateway.senderids.length > 0)
-        ? gateway.senderids[0]
-        : 'KWT-SMS';
-
-      // Override defaults with install-time values
-      const installSettings = Object.assign({}, DEFAULT_SETTINGS, {
-        company_name: companyName,
-        active_sender_id: activeSenderId
-      });
+      const installSettings = buildInstallSettings(gateway, domain);
       await $db.set(DS_KEYS.SETTINGS, { data: JSON.stringify(installSettings) });
       await $db.set(DS_KEYS.TEMPLATES, { data: JSON.stringify(INSTALL_DEFAULT_TEMPLATES) });
       await $db.set(DS_KEYS.ADMIN_ALERTS, { data: JSON.stringify(DEFAULT_ADMIN_ALERTS) });
