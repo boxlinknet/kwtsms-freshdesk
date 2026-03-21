@@ -491,8 +491,14 @@ async function guardGateway() {
 /**
  * Prepare recipients: normalize, validate, filter by coverage, deduplicate.
  */
-function prepareRecipients(phones, coverage, debug) {
-  const normalized = phones.map(normalize).filter(validate);
+function prepareRecipients(phones, coverage, debug, defaultCountryCode) {
+  const normalized = phones.map(normalize).map(function(phone) {
+    // Prepend default country code to short local numbers (less than 10 digits)
+    if (phone && phone.length > 0 && phone.length < 10 && defaultCountryCode) {
+      return String(defaultCountryCode) + phone;
+    }
+    return phone;
+  }).filter(validate);
   const covered = normalized.filter((phone) => {
     if (coverage.length === 0) return true;
     const isCovered = coverage.some((c) => phone.startsWith(String(c)));
@@ -601,7 +607,7 @@ async function send(params) {
     return { success: false, message: 'Message is empty after cleaning' };
   }
 
-  const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug);
+  const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug, settings.default_country_code);
   if (recipients.length === 0) {
     log('Send skipped: no valid recipients after filtering');
     return { success: false, message: 'No valid recipients' };
