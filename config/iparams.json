@@ -1,9 +1,13 @@
 {
   "kwtsms_username": {
     "display_name": "kwtSMS API Username",
-    "description": "Your kwtSMS API username (not your mobile number)",
+    "description": "Your kwtSMS API username (letters and numbers only, no spaces)",
     "type": "text",
-    "required": true
+    "required": true,
+    "regex": {
+      "username-format": "^[a-zA-Z0-9]+$",
+      "username-format-error": "Username must contain only letters and numbers (a-z, A-Z, 0-9). No spaces, dashes, or special characters."
+    }
   },
   "kwtsms_password": {
     "display_name": "kwtSMS API Password",

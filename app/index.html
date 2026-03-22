@@ -18,6 +18,7 @@
         <img src="img/logo.png" alt="kwtSMS" class="logo-img">
       </div>
       <div class="header-actions">
+        <a href="https://www.kwtsms.com/account/" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Go to kwtSMS dashboard to recharge credits, buy sender IDs, or manage your account" style="text-decoration: none; font-size: 0.8rem;">kwtSMS Dashboard &#x2197;</a>
         <button id="btn-lang-toggle" style="display:none" class="btn btn-ghost btn-sm" title="Toggle Language Direction">
           <span id="lang-toggle-label">&#x0639;&#x0631;&#x0628;&#x064A;</span>
         </button>
@@ -32,7 +33,6 @@
       <button class="tab-btn" data-tab="templates" role="tab" aria-selected="false">Templates</button>
       <button class="tab-btn" data-tab="logs" role="tab" aria-selected="false">Logs</button>
       <button class="tab-btn" data-tab="help" role="tab" aria-selected="false">Help</button>
-      <a href="https://www.kwtsms.com/account/" target="_blank" rel="noopener" class="tab-btn tab-btn-link" title="Go to kwtSMS dashboard to recharge credits, buy sender IDs, or manage your account" style="margin-inline-start: auto; text-decoration: none;">kwtSMS Dashboard &#x2197;</a>
     </nav>
 
     <!-- Tab Panels -->
@@ -102,7 +102,7 @@
             </table>
           </div>
         </div>
-        <p style="text-align: right; font-size: 10px; color: #9B9B9D; margin-top: 8px;">build: 20260321-008</p>
+        <p style="text-align: right; font-size: 10px; color: #9B9B9D; margin-top: 8px;">build: 20260321-024</p>
       </section>
 
       <!-- ==================== SETTINGS ==================== -->
@@ -110,6 +110,7 @@
         <!-- General Settings -->
         <div class="section-block">
           <h2 class="section-title">General Settings</h2>
+          <div id="settings-feedback" class="inline-feedback" style="display:none;"></div>
           <div class="settings-list">
             <div class="setting-row">
               <div class="setting-info">
@@ -143,6 +144,13 @@
             </div>
             <div class="setting-row">
               <div class="setting-info">
+                <span class="setting-label">Company Name</span>
+                <span class="setting-desc">Appears as {{company_name}} in SMS templates</span>
+              </div>
+              <input type="text" id="setting-company-name" class="form-input" placeholder="e.g. Acme Support">
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
                 <span class="setting-label">Default Language</span>
                 <span class="setting-desc">Language used for SMS templates</span>
               </div>
@@ -150,13 +158,6 @@
                 <option value="en">English</option>
                 <option value="ar">Arabic</option>
               </select>
-            </div>
-            <div class="setting-row">
-              <div class="setting-info">
-                <span class="setting-label">Company Name</span>
-                <span class="setting-desc">Appears as {{company_name}} in SMS templates</span>
-              </div>
-              <input type="text" id="setting-company-name" class="form-input" placeholder="e.g. Acme Support">
             </div>
             <div class="setting-row">
               <div class="setting-info">
@@ -183,17 +184,10 @@
         <div class="section-block">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-block-end: 16px; padding-block-end: 8px; border-block-end: 1px solid var(--color-border-light);">
             <h2 class="section-title" style="margin: 0; padding: 0; border: none;">Gateway Info</h2>
-            <button class="btn btn-secondary btn-sm" id="btn-sync-now">Sync Now</button>
+            <button class="btn btn-primary btn-sm" id="btn-sync-now">Sync Now</button>
           </div>
+          <div id="sync-feedback" class="inline-feedback" style="display:none;"></div>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">Status</span>
-              <span class="info-value" id="info-gw-status">--</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Username</span>
-              <span class="info-value" id="info-gw-username">--</span>
-            </div>
             <div class="info-item">
               <span class="info-label">Balance</span>
               <span class="info-value" id="info-gw-balance">--</span>
@@ -211,7 +205,6 @@
               <span class="info-value" id="info-gw-last-sync">--</span>
             </div>
           </div>
-          <p class="info-note">Credentials are configured during app installation.</p>
         </div>
 
         <!-- Gateway Test -->
@@ -227,14 +220,6 @@
           </div>
           <button class="btn btn-primary" id="btn-send-test">Send Test SMS</button>
           <div id="test-sms-feedback" style="margin-top: 10px; display: none; padding: 8px 12px; border-radius: 4px; font-size: 0.8125rem;"></div>
-        </div>
-
-        <!-- Debug (temporary) -->
-        <div class="section-block" style="border-color: var(--color-info); border-style: dashed;">
-          <h2 class="section-title" style="color: var(--color-info);">Debug</h2>
-          <button class="btn btn-secondary btn-sm" id="btn-debug-read">Read Raw Data</button>
-          <button class="btn btn-secondary btn-sm" id="btn-debug-read-frontend" style="margin-left: 8px;">Read Frontend DB</button>
-          <pre id="debug-output" style="margin-top: 10px; font-size: 11px; background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; display: none;"></pre>
         </div>
 
         <!-- Test SMS Modal -->
@@ -335,6 +320,7 @@
                 <option value="admin_high_priority">High Priority (Admin)</option>
                 <option value="admin_escalation">Escalation (Admin)</option>
                 <option value="manual_send">Manual Send</option>
+                <option value="gateway_test">Gateway Test</option>
               </select>
             </div>
             <div class="filter-group">
@@ -343,6 +329,14 @@
                 <option value="">All Status</option>
                 <option value="sent">Sent</option>
                 <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label class="form-label" for="log-filter-recipient">Recipient</label>
+              <select id="log-filter-recipient" class="form-select">
+                <option value="">All Recipients</option>
+                <option value="customer">Customer</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
           </div>
@@ -443,6 +437,7 @@
               </label>
             </div>
           </div>
+          <div id="customer-notify-feedback" style="margin-top: 8px; display: none; padding: 6px 10px; border-radius: 4px; font-size: 0.8125rem;"></div>
         </div>
 
         <!-- Admin Notifications -->
@@ -481,6 +476,7 @@
               </label>
             </div>
           </div>
+          <div id="admin-notify-feedback" style="margin-top: 8px; display: none; padding: 6px 10px; border-radius: 4px; font-size: 0.8125rem;"></div>
         </div>
 
         <!-- Admin Recipients -->
@@ -494,6 +490,7 @@
             <!-- Phone items rendered by JS -->
           </ul>
           <p class="empty-message" id="alert-phones-empty">No admin recipients configured</p>
+          <div id="admin-recipient-feedback" style="margin-top: 8px; display: none; padding: 6px 10px; border-radius: 4px; font-size: 0.8125rem;"></div>
         </div>
       </section>
 

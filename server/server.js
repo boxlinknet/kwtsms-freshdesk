@@ -36,12 +36,8 @@ const DS_KEYS = {
   GATEWAY: 'kwtsms_gateway',
   TEMPLATES: 'kwtsms_templates',
   ADMIN_ALERTS: 'kwtsms_admin_alerts',
-  STATS: 'kwtsms_stats'
-};
-
-// Entity Store entity name
-const ENTITY = {
-  SMS_LOG: 'sms_log'
+  STATS: 'kwtsms_stats',
+  LOGS: 'kwtsms_logs'
 };
 
 // SMS event types (used in templates and logs)
@@ -52,7 +48,8 @@ const SMS_EVENT = {
   ADMIN_NEW_TICKET: 'admin_new_ticket',
   ADMIN_HIGH_PRIORITY: 'admin_high_priority',
   ADMIN_ESCALATION: 'admin_escalation',
-  MANUAL_SEND: 'manual_send'
+  MANUAL_SEND: 'manual_send',
+  GATEWAY_TEST: 'gateway_test'
 };
 
 // Default settings (written on app install)
@@ -62,6 +59,7 @@ const DEFAULT_SETTINGS = {
   debug: false,
   language: 'en',
   active_sender_id: 'KWT-SMS',
+  default_country_code: '965',
   company_name: '',
   schema_version: 1
 };
@@ -152,13 +150,66 @@ function normalize(phone) {
   return result;
 }
 
+// Country-specific phone validation rules (from kwtsms-js)
+const PHONE_RULES = {
+  '965':{l:[8],s:['4','5','6','9']},'966':{l:[9],s:['5']},'971':{l:[9],s:['5']},
+  '973':{l:[8],s:['3','6']},'974':{l:[8],s:['3','5','6','7']},'968':{l:[8],s:['7','9']},
+  '962':{l:[9],s:['7']},'961':{l:[7,8],s:['3','7','8']},'970':{l:[9],s:['5']},
+  '964':{l:[10],s:['7']},'963':{l:[9],s:['9']},'967':{l:[9],s:['7']},
+  '20':{l:[10],s:['1']},'218':{l:[9],s:['9']},'216':{l:[8],s:['2','4','5','9']},
+  '212':{l:[9],s:['6','7']},'213':{l:[9],s:['5','6','7']},'249':{l:[9],s:['9']},
+  '98':{l:[10],s:['9']},'90':{l:[10],s:['5']},'972':{l:[9],s:['5']},
+  '91':{l:[10],s:['6','7','8','9']},'92':{l:[10],s:['3']},'880':{l:[10],s:['1']},
+  '94':{l:[9],s:['7']},'960':{l:[7],s:['7','9']},
+  '86':{l:[11],s:['1']},'81':{l:[10],s:['7','8','9']},'82':{l:[10],s:['1']},'886':{l:[9],s:['9']},
+  '65':{l:[8],s:['8','9']},'60':{l:[9,10],s:['1']},'62':{l:[9,10,11,12],s:['8']},
+  '63':{l:[10],s:['9']},'66':{l:[9],s:['6','8','9']},'84':{l:[9],s:['3','5','7','8','9']},
+  '95':{l:[9],s:['9']},'855':{l:[8,9],s:['1','6','7','8','9']},'976':{l:[8],s:['6','8','9']},
+  '44':{l:[10],s:['7']},'33':{l:[9],s:['6','7']},'49':{l:[10,11],s:['1']},
+  '39':{l:[10],s:['3']},'34':{l:[9],s:['6','7']},'31':{l:[9],s:['6']},
+  '32':{l:[9]},'41':{l:[9],s:['7']},'43':{l:[10],s:['6']},'47':{l:[8],s:['4','9']},
+  '48':{l:[9]},'30':{l:[10],s:['6']},'420':{l:[9],s:['6','7']},'46':{l:[9],s:['7']},
+  '45':{l:[8]},'40':{l:[9],s:['7']},'36':{l:[9]},'380':{l:[9]},
+  '1':{l:[10]},'52':{l:[10]},'55':{l:[11]},'57':{l:[10],s:['3']},
+  '54':{l:[10],s:['9']},'56':{l:[9],s:['9']},'58':{l:[10],s:['4']},
+  '51':{l:[9],s:['9']},'593':{l:[9],s:['9']},'53':{l:[8],s:['5','6']},
+  '27':{l:[9],s:['6','7','8']},'234':{l:[10],s:['7','8','9']},'254':{l:[9],s:['1','7']},
+  '233':{l:[9],s:['2','5']},'251':{l:[9],s:['7','9']},'255':{l:[9],s:['6','7']},
+  '256':{l:[9],s:['7']},'237':{l:[9],s:['6']},'225':{l:[10]},'221':{l:[9],s:['7']},
+  '252':{l:[9],s:['6','7']},'250':{l:[9],s:['7']},
+  '61':{l:[9],s:['4']},'64':{l:[8,9,10],s:['2']}
+};
+
+function findCC(n) {
+  if (n.length >= 3 && PHONE_RULES[n.slice(0,3)]) return n.slice(0,3);
+  if (n.length >= 2 && PHONE_RULES[n.slice(0,2)]) return n.slice(0,2);
+  if (n.length >= 1 && PHONE_RULES[n.slice(0,1)]) return n.slice(0,1);
+  return null;
+}
+
 /**
  * Validate a normalized phone number.
- * Must be 7-15 digits (ITU-T E.164 range).
+ * Checks E.164 range (7-15 digits) and country-specific rules.
  */
 function validate(phone) {
   if (!phone) return false;
-  return /^\d{7,15}$/.test(phone);
+  if (!/^\d{7,15}$/.test(phone)) return false;
+  const cc = findCC(phone);
+  if (!cc) return true;
+  const rule = PHONE_RULES[cc];
+  const local = phone.slice(cc.length);
+  if (rule.l.indexOf(local.length) === -1) {
+    // Try stripping local leading zero
+    if (local.charAt(0) === '0') {
+      const stripped = local.slice(1);
+      if (rule.l.indexOf(stripped.length) !== -1) return true;
+    }
+    return false;
+  }
+  if (rule.s && rule.s.length > 0) {
+    return rule.s.some(function(p) { return local.indexOf(p) === 0; });
+  }
+  return true;
 }
 
 /**
@@ -357,12 +408,19 @@ function buildPlaceholderData(payload, companyName, language) {
 // ======================================================================
 
 /**
- * Log an SMS send result to Entity Store.
+ * Log an SMS send result to Data Storage (array, max 200 entries).
  * Non-fatal: catches and console.error on failure.
  */
 async function logSmsResult(entry) {
   try {
-    await $db.entity.create(ENTITY.SMS_LOG, {
+    let logs = [];
+    try {
+      const { data } = await $db.get(DS_KEYS.LOGS);
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (Array.isArray(parsed)) logs = parsed;
+    } catch (e) { /* key doesn't exist yet */ }
+
+    logs.unshift({
       timestamp: new Date().toISOString(),
       event_type: entry.event_type,
       recipient_phone: entry.recipient_phone,
@@ -372,6 +430,9 @@ async function logSmsResult(entry) {
       ticket_id: entry.ticket_id || 0,
       msg_id: entry.msg_id || ''
     });
+
+    if (logs.length > 200) logs = logs.slice(0, 200);
+    await $db.set(DS_KEYS.LOGS, { data: JSON.stringify(logs) });
   } catch (err) {
     console.error('[kwtsms] Failed to write log entry:', err.message);
   }
@@ -457,7 +518,8 @@ async function guardSettings() {
   let settings;
   try {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
-    settings = typeof data === 'string' ? JSON.parse(data) : data;
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
   } catch (err) {
     log('Settings not found, plugin may not be initialized');
     return { error: { success: false, message: 'Plugin not configured' } };
@@ -472,18 +534,40 @@ async function guardSettings() {
 /**
  * Guard: check gateway exists and has positive balance, or return an error result.
  */
-async function guardGateway() {
+function isCacheStale(lastSync) {
+  if (!lastSync) return true;
+  const age = Date.now() - new Date(lastSync).getTime();
+  return age > 24 * 60 * 60 * 1000;
+}
+
+async function guardGateway(credentials) {
   let gateway;
   try {
     const { data } = await $db.get(DS_KEYS.GATEWAY);
     gateway = typeof data === 'string' ? JSON.parse(data) : data;
   } catch (err) {
     log('Gateway data not found');
-    return { error: { success: false, message: 'Gateway not configured' } };
+    return { error: { success: false, message: 'Gateway not configured. Click Sync Now in Settings.' } };
   }
+
+  // Refresh balance from API if cache is stale (>24h)
+  if (isCacheStale(gateway.last_sync) && credentials) {
+    try {
+      const credBody = JSON.stringify(credentials);
+      const balanceResp = await $request.invokeTemplate('checkBalance', { body: credBody });
+      const balance = JSON.parse(balanceResp.response);
+      gateway.balance = balance.available || 0;
+      gateway.last_sync = new Date().toISOString();
+      await $db.set(DS_KEYS.GATEWAY, { data: JSON.stringify(gateway) });
+      log('Balance refreshed from API: ' + gateway.balance);
+    } catch (err) {
+      debugLog('Balance refresh failed, using cached value: ' + (err.message || ''), true);
+    }
+  }
+
   if (!gateway.balance || gateway.balance <= 0) {
     log('Send skipped: zero balance');
-    return { error: { success: false, message: 'Insufficient balance' } };
+    return { error: { success: false, message: 'Insufficient balance. Recharge at kwtsms.com' } };
   }
   return { gateway };
 }
@@ -526,13 +610,20 @@ async function updateCachedBalance(result, gateway, debug) {
 /**
  * Build a log entry object from send result details.
  */
+function getRecipientType(eventType) {
+  if (eventType === SMS_EVENT.ADMIN_NEW_TICKET || eventType === SMS_EVENT.ADMIN_HIGH_PRIORITY || eventType === SMS_EVENT.ADMIN_ESCALATION || eventType === SMS_EVENT.GATEWAY_TEST) return 'admin';
+  return 'customer';
+}
+
 function buildLogEntry(eventType, recipients, cleanedMessage, success, result, ticketId) {
   return {
     event_type: eventType,
+    recipient_type: getRecipientType(eventType),
     recipient_phone: recipients.join(','),
     message_preview: cleanedMessage,
     status: success ? 'sent' : 'failed',
     api_response_code: result.code || result.result || '',
+    error_message: success ? '' : (result.description || result.message || result.code || ''),
     ticket_id: ticketId || 0,
     msg_id: result['msg-id'] || ''
   };
@@ -576,51 +667,70 @@ async function handleSendResult(result, gateway, settings, recipients, eventType
 /**
  * Dispatch the actual send call (single batch or bulk).
  */
-function dispatchSend(credentials, recipients, cleanedMessage, settings) {
+function _dispatch(credentials, recipients, cleanedMessage, settings) {
   const testFlag = settings.test_mode ? '1' : '0';
   const sender = settings.active_sender_id || 'KWT-SMS';
   debugLog(`Sending to ${recipients.length} recipient(s), test=${testFlag}`, settings.debug);
 
   if (recipients.length <= KWTSMS.MAX_BATCH_SIZE) {
-    return sendBatch(credentials, recipients.join(','), cleanedMessage, sender, testFlag);
+    return _sendBatch(credentials, recipients.join(','), cleanedMessage, sender, testFlag);
   }
-  return bulkSend(credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
+  return _sendBulk(credentials, recipients, cleanedMessage, sender, testFlag, settings.debug);
 }
 
 /**
  * Send SMS through the full guard chain.
  */
 async function send(params) {
-  const { credentials, phones, message, eventType, ticketId } = params;
+  const { credentials, message, eventType, ticketId } = params;
 
+  // 0. Flatten phones: split any comma-separated strings, trim, filter empty
+  const phones = [].concat(params.phones || []).reduce(function(acc, p) {
+    String(p).split(',').forEach(function(s) { const t = s.trim(); if (t) acc.push(t); });
+    return acc;
+  }, []);
+
+  if (phones.length === 0) {
+    return { success: false, message: 'No phone numbers provided' };
+  }
+
+  // 1. Check SMS is enabled
   const settingsGuard = await guardSettings();
   if (settingsGuard.error) return settingsGuard.error;
   const settings = settingsGuard.settings;
 
-  const gatewayGuard = await guardGateway();
+  // 2. Check gateway + balance (refreshes from API if cache >24h)
+  const gatewayGuard = await guardGateway(credentials);
   if (gatewayGuard.error) return gatewayGuard.error;
   const gateway = gatewayGuard.gateway;
 
+  // 3. Clean message
   const cleanedMessage = cleanMessage(message);
   if (!cleanedMessage) {
     log('Send skipped: empty message after cleaning');
     return { success: false, message: 'Message is empty after cleaning' };
   }
 
+  // 4. Normalize, validate, deduplicate, filter by coverage
+  const inputCount = phones.length;
   const recipients = prepareRecipients(phones, gateway.coverage || [], settings.debug, settings.default_country_code);
   if (recipients.length === 0) {
-    log('Send skipped: no valid recipients after filtering');
-    return { success: false, message: 'No valid recipients' };
+    const dropped = inputCount - recipients.length;
+    log('Send skipped: no valid recipients (' + dropped + ' number(s) failed validation or coverage)');
+    return { success: false, message: 'No valid recipients. Check phone format and country coverage.' };
   }
 
-  const result = await dispatchSend(credentials, recipients, cleanedMessage, settings);
+  // 5. Send (auto-chunks at 200)
+  const result = await _dispatch(credentials, recipients, cleanedMessage, settings);
+
+  // 6. Log, update balance, return result
   return handleSendResult(result, gateway, settings, recipients, eventType, ticketId, cleanedMessage);
 }
 
 /**
  * Send a single batch (up to 200 numbers).
  */
-async function sendBatch(credentials, mobile, message, sender, test) {
+async function _sendBatch(credentials, mobile, message, sender, test) {
   try {
     const response = await $request.invokeTemplate('sendSms', {
       body: JSON.stringify({
@@ -647,7 +757,7 @@ async function sendBatch(credentials, mobile, message, sender, test) {
 /**
  * Send to >200 numbers by chunking with delays and ERR013 backoff.
  */
-async function bulkSend(credentials, recipients, message, sender, test, debug) {
+async function _sendBulk(credentials, recipients, message, sender, test, debug) {
   let lastResult = { result: 'ERROR', description: 'No batches sent' };
 
   for (let i = 0; i < recipients.length; i += KWTSMS.MAX_BATCH_SIZE) {
@@ -659,7 +769,7 @@ async function bulkSend(credentials, recipients, message, sender, test, debug) {
 
     let attempt = 0;
     while (attempt <= KWTSMS.MAX_RETRIES) {
-      const result = await sendBatch(credentials, batch.join(','), message, sender, test);
+      const result = await _sendBatch(credentials, batch.join(','), message, sender, test);
 
       if (result.code === 'ERR013' && attempt < KWTSMS.MAX_RETRIES) {
         debugLog(`ERR013 queue full, backing off ${KWTSMS.ERR013_BACKOFF_MS[attempt]}ms`, debug);
@@ -1027,11 +1137,10 @@ exports = {
     log('App uninstalling. Cleaning up...');
 
     try {
-      const keys = [DS_KEYS.SETTINGS, DS_KEYS.GATEWAY, DS_KEYS.TEMPLATES, DS_KEYS.ADMIN_ALERTS, DS_KEYS.STATS];
+      const keys = [DS_KEYS.SETTINGS, DS_KEYS.GATEWAY, DS_KEYS.TEMPLATES, DS_KEYS.ADMIN_ALERTS, DS_KEYS.STATS, DS_KEYS.LOGS];
       for (let i = 0; i < keys.length; i++) {
         try { await $db.delete(keys[i]); } catch (e) { /* ignore */ }
       }
-      try { await $db.entity.deleteAll(ENTITY.SMS_LOG); } catch (e) { /* ignore */ }
       try { await $schedule.delete({ name: 'kwtsms_daily_sync' }); } catch (e) { /* ignore */ }
       log('Cleanup complete.');
     } catch (err) {
@@ -1055,24 +1164,12 @@ exports = {
     }
   },
 
-  debugRead: async function() {
-    try {
-      const gw = await $db.get(DS_KEYS.GATEWAY);
-      const settings = await $db.get(DS_KEYS.SETTINGS);
-      renderData(null, {
-        gateway: JSON.stringify(gw).substring(0, 300),
-        settings: JSON.stringify(settings).substring(0, 300)
-      });
-    } catch (err) {
-      renderData(null, { error: formatError(err) });
-    }
-  },
-
   manualSendSms: async function(args) {
     const smiData = args.data || {};
     const phone = smiData.phone;
     const message = smiData.message;
     const ticket_id = smiData.ticket_id;
+    const eventType = smiData.event_type || SMS_EVENT.MANUAL_SEND;
 
     if (!phone || !message) {
       renderData(null, { success: false, message: 'Phone and message are required' });
@@ -1085,7 +1182,7 @@ exports = {
       credentials: credentials,
       phones: [phone],
       message: message,
-      eventType: SMS_EVENT.MANUAL_SEND,
+      eventType: eventType,
       ticketId: ticket_id
     });
     renderData(null, result);

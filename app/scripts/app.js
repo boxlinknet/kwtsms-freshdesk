@@ -23,11 +23,9 @@
     GATEWAY: 'kwtsms_gateway',
     TEMPLATES: 'kwtsms_templates',
     ADMIN_ALERTS: 'kwtsms_admin_alerts',
-    STATS: 'kwtsms_stats'
+    STATS: 'kwtsms_stats',
+    LOGS: 'kwtsms_logs'
   };
-
-  /** @type {string} Entity Store entity name */
-  const ENTITY_SMS_LOG = 'sms_log';
 
   /** @type {Object} Default settings */
   const DEFAULT_SETTINGS = {
@@ -50,6 +48,184 @@
       escalation: true
     }
   };
+
+  // ──────────────────────────────────────────────
+  // Phone Validation (from kwtsms-js)
+  // ──────────────────────────────────────────────
+
+  const PHONE_RULES = {
+    // GCC
+    '965': { localLengths: [8], mobileStartDigits: ['4','5','6','9'] },
+    '966': { localLengths: [9], mobileStartDigits: ['5'] },
+    '971': { localLengths: [9], mobileStartDigits: ['5'] },
+    '973': { localLengths: [8], mobileStartDigits: ['3','6'] },
+    '974': { localLengths: [8], mobileStartDigits: ['3','5','6','7'] },
+    '968': { localLengths: [8], mobileStartDigits: ['7','9'] },
+    // Levant
+    '962': { localLengths: [9], mobileStartDigits: ['7'] },
+    '961': { localLengths: [7,8], mobileStartDigits: ['3','7','8'] },
+    '970': { localLengths: [9], mobileStartDigits: ['5'] },
+    '964': { localLengths: [10], mobileStartDigits: ['7'] },
+    '963': { localLengths: [9], mobileStartDigits: ['9'] },
+    // Other Arab
+    '967': { localLengths: [9], mobileStartDigits: ['7'] },
+    '20':  { localLengths: [10], mobileStartDigits: ['1'] },
+    '218': { localLengths: [9], mobileStartDigits: ['9'] },
+    '216': { localLengths: [8], mobileStartDigits: ['2','4','5','9'] },
+    '212': { localLengths: [9], mobileStartDigits: ['6','7'] },
+    '213': { localLengths: [9], mobileStartDigits: ['5','6','7'] },
+    '249': { localLengths: [9], mobileStartDigits: ['9'] },
+    // Non-Arab Middle East
+    '98':  { localLengths: [10], mobileStartDigits: ['9'] },
+    '90':  { localLengths: [10], mobileStartDigits: ['5'] },
+    '972': { localLengths: [9], mobileStartDigits: ['5'] },
+    // South Asia
+    '91':  { localLengths: [10], mobileStartDigits: ['6','7','8','9'] },
+    '92':  { localLengths: [10], mobileStartDigits: ['3'] },
+    '880': { localLengths: [10], mobileStartDigits: ['1'] },
+    '94':  { localLengths: [9], mobileStartDigits: ['7'] },
+    '960': { localLengths: [7], mobileStartDigits: ['7','9'] },
+    // East Asia
+    '86':  { localLengths: [11], mobileStartDigits: ['1'] },
+    '81':  { localLengths: [10], mobileStartDigits: ['7','8','9'] },
+    '82':  { localLengths: [10], mobileStartDigits: ['1'] },
+    '886': { localLengths: [9], mobileStartDigits: ['9'] },
+    // Southeast Asia
+    '65':  { localLengths: [8], mobileStartDigits: ['8','9'] },
+    '60':  { localLengths: [9,10], mobileStartDigits: ['1'] },
+    '62':  { localLengths: [9,10,11,12], mobileStartDigits: ['8'] },
+    '63':  { localLengths: [10], mobileStartDigits: ['9'] },
+    '66':  { localLengths: [9], mobileStartDigits: ['6','8','9'] },
+    '84':  { localLengths: [9], mobileStartDigits: ['3','5','7','8','9'] },
+    '95':  { localLengths: [9], mobileStartDigits: ['9'] },
+    '855': { localLengths: [8,9], mobileStartDigits: ['1','6','7','8','9'] },
+    '976': { localLengths: [8], mobileStartDigits: ['6','8','9'] },
+    // Europe
+    '44':  { localLengths: [10], mobileStartDigits: ['7'] },
+    '33':  { localLengths: [9], mobileStartDigits: ['6','7'] },
+    '49':  { localLengths: [10,11], mobileStartDigits: ['1'] },
+    '39':  { localLengths: [10], mobileStartDigits: ['3'] },
+    '34':  { localLengths: [9], mobileStartDigits: ['6','7'] },
+    '31':  { localLengths: [9], mobileStartDigits: ['6'] },
+    '32':  { localLengths: [9] },
+    '41':  { localLengths: [9], mobileStartDigits: ['7'] },
+    '43':  { localLengths: [10], mobileStartDigits: ['6'] },
+    '47':  { localLengths: [8], mobileStartDigits: ['4','9'] },
+    '48':  { localLengths: [9] },
+    '30':  { localLengths: [10], mobileStartDigits: ['6'] },
+    '420': { localLengths: [9], mobileStartDigits: ['6','7'] },
+    '46':  { localLengths: [9], mobileStartDigits: ['7'] },
+    '45':  { localLengths: [8] },
+    '40':  { localLengths: [9], mobileStartDigits: ['7'] },
+    '36':  { localLengths: [9] },
+    '380': { localLengths: [9] },
+    // Americas
+    '1':   { localLengths: [10] },
+    '52':  { localLengths: [10] },
+    '55':  { localLengths: [11] },
+    '57':  { localLengths: [10], mobileStartDigits: ['3'] },
+    '54':  { localLengths: [10], mobileStartDigits: ['9'] },
+    '56':  { localLengths: [9], mobileStartDigits: ['9'] },
+    '58':  { localLengths: [10], mobileStartDigits: ['4'] },
+    '51':  { localLengths: [9], mobileStartDigits: ['9'] },
+    '593': { localLengths: [9], mobileStartDigits: ['9'] },
+    '53':  { localLengths: [8], mobileStartDigits: ['5','6'] },
+    // Africa
+    '27':  { localLengths: [9], mobileStartDigits: ['6','7','8'] },
+    '234': { localLengths: [10], mobileStartDigits: ['7','8','9'] },
+    '254': { localLengths: [9], mobileStartDigits: ['1','7'] },
+    '233': { localLengths: [9], mobileStartDigits: ['2','5'] },
+    '251': { localLengths: [9], mobileStartDigits: ['7','9'] },
+    '255': { localLengths: [9], mobileStartDigits: ['6','7'] },
+    '256': { localLengths: [9], mobileStartDigits: ['7'] },
+    '237': { localLengths: [9], mobileStartDigits: ['6'] },
+    '225': { localLengths: [10] },
+    '221': { localLengths: [9], mobileStartDigits: ['7'] },
+    '252': { localLengths: [9], mobileStartDigits: ['6','7'] },
+    '250': { localLengths: [9], mobileStartDigits: ['7'] },
+    // Oceania
+    '61':  { localLengths: [9], mobileStartDigits: ['4'] },
+    '64':  { localLengths: [8,9,10], mobileStartDigits: ['2'] }
+  };
+
+  const COUNTRY_NAMES = {
+    '965':'Kuwait','966':'Saudi Arabia','971':'UAE','973':'Bahrain','974':'Qatar','968':'Oman',
+    '962':'Jordan','961':'Lebanon','970':'Palestine','964':'Iraq','963':'Syria','967':'Yemen',
+    '20':'Egypt','218':'Libya','216':'Tunisia','212':'Morocco','213':'Algeria','249':'Sudan',
+    '98':'Iran','90':'Turkey','972':'Israel',
+    '91':'India','92':'Pakistan','880':'Bangladesh','94':'Sri Lanka','960':'Maldives',
+    '86':'China','81':'Japan','82':'South Korea','886':'Taiwan',
+    '65':'Singapore','60':'Malaysia','62':'Indonesia','63':'Philippines','66':'Thailand',
+    '84':'Vietnam','95':'Myanmar','855':'Cambodia','976':'Mongolia',
+    '44':'UK','33':'France','49':'Germany','39':'Italy','34':'Spain','31':'Netherlands',
+    '32':'Belgium','41':'Switzerland','43':'Austria','47':'Norway','48':'Poland',
+    '30':'Greece','420':'Czech Republic','46':'Sweden','45':'Denmark','40':'Romania',
+    '36':'Hungary','380':'Ukraine',
+    '1':'USA/Canada','52':'Mexico','55':'Brazil','57':'Colombia','54':'Argentina',
+    '56':'Chile','58':'Venezuela','51':'Peru','593':'Ecuador','53':'Cuba',
+    '27':'South Africa','234':'Nigeria','254':'Kenya','233':'Ghana','251':'Ethiopia',
+    '255':'Tanzania','256':'Uganda','237':'Cameroon','225':'Ivory Coast','221':'Senegal',
+    '252':'Somalia','250':'Rwanda',
+    '61':'Australia','64':'New Zealand'
+  };
+
+  function findCountryCode(normalized) {
+    if (normalized.length >= 3 && PHONE_RULES[normalized.slice(0, 3)]) return normalized.slice(0, 3);
+    if (normalized.length >= 2 && PHONE_RULES[normalized.slice(0, 2)]) return normalized.slice(0, 2);
+    if (normalized.length >= 1 && PHONE_RULES[normalized.slice(0, 1)]) return normalized.slice(0, 1);
+    return null;
+  }
+
+  function validatePhoneFormat(normalized) {
+    const cc = findCountryCode(normalized);
+    if (!cc) return { valid: true };
+    const rule = PHONE_RULES[cc];
+    const local = normalized.slice(cc.length);
+    if (rule.localLengths.indexOf(local.length) === -1) return { valid: false };
+    if (rule.mobileStartDigits && rule.mobileStartDigits.length > 0) {
+      const ok = rule.mobileStartDigits.some(function(p) { return local.indexOf(p) === 0; });
+      if (!ok) return { valid: false };
+    }
+    return { valid: true };
+  }
+
+  function validateSinglePhone(trimmed) {
+    if (!trimmed) return [false, 'Phone number is required', ''];
+    let normalized = trimmed.replace(/\D/g, '').replace(/^0+/, '');
+    if (!normalized) return [false, 'Invalid phone number', ''];
+    if (normalized.length > 0 && normalized.length < 10) {
+      const cc = (state.currentSettings && state.currentSettings.default_country_code) || '965';
+      normalized = String(cc) + normalized;
+    }
+    if (normalized.length < 7 || normalized.length > 15) return [false, 'Invalid phone number', normalized];
+    const check = validatePhoneFormat(normalized);
+    if (!check.valid) {
+      const cc = findCountryCode(normalized);
+      if (cc) {
+        const local = normalized.slice(cc.length);
+        if (local.charAt(0) === '0') {
+          const stripped = cc + local.slice(1);
+          if (validatePhoneFormat(stripped).valid) return [true, null, stripped];
+        }
+      }
+      return [false, 'Invalid phone number', normalized];
+    }
+    return [true, null, normalized];
+  }
+
+  function validatePhoneInput(raw) {
+    const trimmed = String(raw).trim();
+    if (!trimmed) return [false, 'Phone number is required', ''];
+    const parts = trimmed.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
+    if (parts.length === 0) return [false, 'Phone number is required', ''];
+    const validated = [];
+    for (let i = 0; i < parts.length; i++) {
+      const result = validateSinglePhone(parts[i]);
+      if (!result[0]) return [false, 'Invalid phone number: ' + parts[i], ''];
+      validated.push(result[2]);
+    }
+    return [true, null, validated.join(',')];
+  }
 
   /** @type {string} GSM-7 character set for SMS part calculation */
   const GSM7_CHARS = '@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e\u00c6\u00e6\u00df\u00c9 !"#\u00a4%&\'()*+,-./0123456789:;<=>?'
@@ -124,7 +300,6 @@
     setupTemplateHandlers();
     setupLogHandlers();
     setupAlertHandlers();
-    setupDebugHandlers();
     loadDashboard();
   }
 
@@ -261,30 +436,6 @@
   }
 
   /**
-   * Query Entity Store records.
-   * @param {string} entity - Entity name
-   * @param {Object} [opts] - Query options (filter, page, page_size)
-   * @returns {Promise<Object>} Query result
-   */
-  function entityGetAll(entity, opts) {
-    if (!state.client || !state.client.db || !state.client.db.entity || typeof state.client.db.entity.getAll !== 'function') return Promise.resolve({ records: [], next: null });
-    const params = opts || {};
-    return state.client.db.entity.getAll(entity, params).catch(function () {
-      return { records: [], next: null };
-    });
-  }
-
-  /**
-   * Delete all records in an entity.
-   * @param {string} entity - Entity name
-   * @returns {Promise}
-   */
-  function entityDeleteAll(entity) {
-    if (!state.client || !state.client.db || !state.client.db.entity || typeof state.client.db.entity.deleteAll !== 'function') return Promise.resolve();
-    return state.client.db.entity.deleteAll(entity).catch(function () {
-      // Ignore errors
-    });
-  }
 
   // ──────────────────────────────────────────────
   // Toast Notifications
@@ -441,7 +592,8 @@
       'admin_new_ticket': 'New Ticket (Admin)',
       'admin_high_priority': 'High Priority (Admin)',
       'admin_escalation': 'Escalation (Admin)',
-      'manual_send': 'Manual Send'
+      'manual_send': 'Manual Send',
+      'gateway_test': 'Gateway Test'
     };
     return labels[eventType] || eventType;
   }
@@ -518,12 +670,12 @@
   }
 
   /**
-   * Load and render recent activity table from Entity Store.
+   * Load and render recent activity table from Data Storage logs.
    */
   function loadRecentActivity() {
-    entityGetAll(ENTITY_SMS_LOG, { page_size: 5 }).then(function (result) {
-      const records = (result && result.records) || [];
-      renderActivityTable('recent-activity-body', records, 'No recent activity');
+    dbGet(DS_KEYS.LOGS).then(function (logs) {
+      const all = Array.isArray(logs) ? logs : [];
+      renderActivityTable('recent-activity-body', all.slice(0, 5), 'No recent activity');
     }).catch(function () { /* ignored */ });
   }
 
@@ -585,6 +737,10 @@
     const isSent = rec.status === 'sent';
     statusBadge.className = 'badge ' + (isSent ? 'badge-sent' : 'badge-failed');
     statusBadge.textContent = isSent ? 'Sent' : 'Failed';
+    if (!isSent && rec.error_message) {
+      statusBadge.title = rec.error_message;
+      statusBadge.style.cursor = 'help';
+    }
     tdStatus.appendChild(statusBadge);
     tr.appendChild(tdStatus);
 
@@ -670,57 +826,17 @@
     }
   }
 
-  // Debug handlers (temporary)
-  function setupDebugHandlers() {
-    const btnServer = document.getElementById('btn-debug-read');
-    if (btnServer) {
-      btnServer.addEventListener('click', function () {
-        const out = document.getElementById('debug-output');
-        if (out) { out.style.display = 'block'; out.textContent = 'Reading from server...'; }
-        if (state.client && state.client.request) {
-          state.client.request.invoke('debugRead', {}).then(function (result) {
-            if (out) out.textContent = 'Server $db:\n' + JSON.stringify(result.response, null, 2);
-          }).catch(function (err) {
-            if (out) out.textContent = 'Server error: ' + (err.message || JSON.stringify(err));
-          });
-        }
-      });
-    }
-    const btnFrontend = document.getElementById('btn-debug-read-frontend');
-    if (btnFrontend) {
-      btnFrontend.addEventListener('click', function () {
-        const out = document.getElementById('debug-output');
-        if (out) { out.style.display = 'block'; out.textContent = 'Reading from frontend...'; }
-        if (state.client && state.client.db) {
-          state.client.db.get('kwtsms_gateway').then(function (gw) {
-            state.client.db.get('kwtsms_settings').then(function (settings) {
-              if (out) out.textContent = 'Frontend client.db.get:\n\nkwtsms_gateway:\n' + JSON.stringify(gw, null, 2) + '\n\nkwtsms_settings:\n' + JSON.stringify(settings, null, 2);
-            });
-          }).catch(function (err) {
-            if (out) out.textContent = 'Frontend error: ' + (err.message || JSON.stringify(err));
-          });
-        }
-      });
-    }
-  }
 
   /**
    * Render gateway info fields and dropdowns from stored gateway data.
    */
   function renderGatewayInfo(gw) {
-    setText('info-gw-status', gw.last_sync ? 'Connected' : 'Disconnected');
     setText('info-gw-balance', String(gw.balance || 0) + ' credits');
     setText('info-gw-senders', gw.senderids ? gw.senderids.join(', ') : '--');
-    setText('info-gw-coverage', gw.coverage ? gw.coverage.length + ' countries' : '--');
+    setText('info-gw-coverage', gw.coverage ? gw.coverage.map(function(c) { return '+' + c; }).join(', ') : '--');
     setText('info-gw-last-sync', formatDate(gw.last_sync));
     populateSenderDropdown(gw.senderids || []);
     populateCountryCodeDropdown(gw.coverage || []);
-    // Show username from iparams
-    if (state.client && state.client.iparams) {
-      state.client.iparams.get('kwtsms_username').then(function (iparams) {
-        setText('info-gw-username', iparams.kwtsms_username || '--');
-      }).catch(function () { /* ignored */ });
-    }
   }
 
   /**
@@ -752,22 +868,14 @@
   /**
    * Populate the default country code dropdown from coverage data.
    */
-  // Common country code labels used by populateCountryCodeDropdown
-  const COUNTRY_NAMES = {
-    '965': 'Kuwait (+965)', '966': 'Saudi Arabia (+966)', '971': 'UAE (+971)',
-    '973': 'Bahrain (+973)', '974': 'Qatar (+974)', '968': 'Oman (+968)',
-    '962': 'Jordan (+962)', '961': 'Lebanon (+961)', '20': 'Egypt (+20)',
-    '964': 'Iraq (+964)', '1': 'USA/Canada (+1)', '44': 'UK (+44)',
-    '91': 'India (+91)', '92': 'Pakistan (+92)', '63': 'Philippines (+63)'
-  };
-
   /**
    * Create an <option> element for a country code.
    */
   function buildCountryOption(code) {
     const opt = document.createElement('option');
     opt.value = code;
-    opt.textContent = COUNTRY_NAMES[code] || '+' + code;
+    const name = COUNTRY_NAMES[code];
+    opt.textContent = name ? name + ' (+' + code + ')' : '+' + code;
     return opt;
   }
 
@@ -833,9 +941,9 @@
     if (!state.currentSettings) state.currentSettings = Object.assign({}, DEFAULT_SETTINGS);
     state.currentSettings[field] = value;
     dbSet(DS_KEYS.SETTINGS, state.currentSettings).then(function () {
-      showToast('Setting saved', 'success');
+      showInlineFeedback('settings-feedback', 'Setting saved', 'success');
     }).catch(function () {
-      showToast('Failed to save setting', 'error');
+      showInlineFeedback('settings-feedback', 'Failed to save setting', 'error');
     });
   }
 
@@ -850,19 +958,19 @@
       state.client.request.invoke('syncGateway', {}).then(function (result) {
         const resp = result && result.response ? (typeof result.response === 'string' ? JSON.parse(result.response) : result.response) : {};
         if (resp.success) {
-          showTestFeedback('Synced! Balance: ' + resp.balance + ' | Saved: ' + (resp.saved || 'none'), 'success');
+          showInlineFeedback('sync-feedback', 'Gateway synced successfully', 'success');
         } else {
-          showTestFeedback('Failed: ' + (resp.message || 'Unknown'), 'error');
+          showInlineFeedback('sync-feedback', 'Sync failed: ' + (resp.message || 'Unknown error'), 'error');
         }
         loadSettings();
         loadDashboard();
       }).catch(function (err) {
-        showTestFeedback('Catch: ' + (err.message || JSON.stringify(err)), 'error');
+        showInlineFeedback('sync-feedback', 'Sync failed: ' + (err.message || 'Unknown error'), 'error');
       }).finally(function () {
         if (btn) btn.disabled = false;
       });
     } else {
-      showToast('Cannot sync: client not available', 'error');
+      showInlineFeedback('sync-feedback', 'Cannot sync: client not available', 'error');
       if (btn) btn.disabled = false;
     }
   }
@@ -877,18 +985,25 @@
     const msgInput = document.getElementById('test-message');
     if (!phoneInput || !msgInput) return null;
 
-    const phone = phoneInput.value.trim();
+    const raw = phoneInput.value.trim();
     const message = msgInput.value.trim();
 
-    if (!phone) {
-      showToast('Please enter a phone number', 'warning');
+    if (!raw) {
+      showTestFeedback('Please enter a phone number', 'warning');
       return null;
     }
     if (!message) {
-      showToast('Please enter a message', 'warning');
+      showTestFeedback('Please enter a message', 'warning');
       return null;
     }
-    return { phone: phone, message: message };
+
+    const result = validatePhoneInput(raw);
+    if (!result[0]) {
+      showTestFeedback(result[1], 'error');
+      return null;
+    }
+
+    return { phone: result[2], message: message };
   }
 
   /**
@@ -907,6 +1022,16 @@
     el.textContent = message;
   }
 
+  function showInlineFeedback(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)';
+    el.style.color = type === 'success' ? 'var(--color-success)' : 'var(--color-error)';
+    el.textContent = message;
+    setTimeout(function() { el.style.display = 'none'; }, 3000);
+  }
+
   function handleTestSmsResult(result) {
     let resp = result && result.response ? result.response : {};
     if (typeof resp === 'string') { try { resp = JSON.parse(resp); } catch (e) { /* keep */ } }
@@ -922,7 +1047,7 @@
    */
   function invokeManualSendSms(inputs, sendBtn) {
     state.client.request.invoke('manualSendSms', {
-      data: { phone: inputs.phone, message: inputs.message }
+      data: { phone: inputs.phone, message: inputs.message, event_type: 'gateway_test' }
     }).then(handleTestSmsResult).catch(function (err) {
       showTestFeedback('Error: ' + (err.message || 'Send failed'), 'error');
     }).finally(function () {
@@ -1173,6 +1298,10 @@
     if (statusFilter) {
       statusFilter.addEventListener('change', function () { state.logPage = 1; loadLogs(); });
     }
+    const recipientFilter = document.getElementById('log-filter-recipient');
+    if (recipientFilter) {
+      recipientFilter.addEventListener('change', function () { state.logPage = 1; loadLogs(); });
+    }
 
     const prevBtn = document.getElementById('btn-log-prev');
     if (prevBtn) {
@@ -1208,40 +1337,40 @@
   }
 
   /**
-   * Load and render logs from Entity Store with filters.
+   * Load and render logs from Data Storage with filters and pagination.
    */
   function loadLogs() {
     const eventFilter = document.getElementById('log-filter-event');
     const statusFilter = document.getElementById('log-filter-status');
+    const recipientFilter = document.getElementById('log-filter-recipient');
 
-    const params = {
-      page: state.logPage,
-      page_size: LOG_PAGE_SIZE
-    };
+    dbGet(DS_KEYS.LOGS).then(function (logs) {
+      let all = Array.isArray(logs) ? logs : [];
 
-    // Build filter object
-    const filter = {};
-    if (eventFilter && eventFilter.value) {
-      filter.event_type = eventFilter.value;
-    }
-    if (statusFilter && statusFilter.value) {
-      filter.status = statusFilter.value;
-    }
-    if (Object.keys(filter).length > 0) {
-      params.filter = filter;
-    }
+      // Apply filters
+      if (eventFilter && eventFilter.value) {
+        all = all.filter(function (r) { return r.event_type === eventFilter.value; });
+      }
+      if (statusFilter && statusFilter.value) {
+        all = all.filter(function (r) { return r.status === statusFilter.value; });
+      }
+      if (recipientFilter && recipientFilter.value) {
+        all = all.filter(function (r) { return r.recipient_type === recipientFilter.value; });
+      }
 
-    entityGetAll(ENTITY_SMS_LOG, params).then(function (result) {
-      const records = (result && result.records) || [];
-      renderActivityTable('log-table-body', records, 'No SMS logs yet');
+      // Paginate
+      const start = (state.logPage - 1) * LOG_PAGE_SIZE;
+      const page = all.slice(start, start + LOG_PAGE_SIZE);
+      const hasNext = start + LOG_PAGE_SIZE < all.length;
 
-      // Update pagination
+      renderActivityTable('log-table-body', page, 'No SMS logs yet');
+
       const prevBtn = document.getElementById('btn-log-prev');
       const nextBtn = document.getElementById('btn-log-next');
       const pageInfo = document.getElementById('log-page-info');
 
       if (prevBtn) prevBtn.disabled = state.logPage <= 1;
-      if (nextBtn) nextBtn.disabled = !result || !result.next;
+      if (nextBtn) nextBtn.disabled = !hasNext;
       if (pageInfo) pageInfo.textContent = 'Page ' + state.logPage;
     }).catch(function () { /* ignored */ });
   }
@@ -1250,7 +1379,7 @@
    * Handle Clear Logs confirmation.
    */
   function handleClearLogs() {
-    entityDeleteAll(ENTITY_SMS_LOG).then(function () {
+    dbSet(DS_KEYS.LOGS, []).then(function () {
       showToast('All logs cleared', 'success');
       hideModal('modal-clear-logs');
       state.logPage = 1;
@@ -1382,17 +1511,19 @@
     const input = document.getElementById('alert-phone-input');
     if (!input) return;
 
-    const phone = input.value.trim();
-    if (!phone) {
-      showToast('Please enter a phone number', 'warning');
+    const raw = input.value.trim();
+    if (!raw) {
+      showInlineFeedback('admin-recipient-feedback', 'Please enter a phone number', 'error');
       return;
     }
 
-    // Basic phone validation (starts with + and has digits)
-    if (!/^\+?\d{8,15}$/.test(phone.replace(/\s/g, ''))) {
-      showToast('Invalid phone number format', 'error');
+    const result = validatePhoneInput(raw);
+    if (!result[0]) {
+      showInlineFeedback('admin-recipient-feedback', result[1], 'error');
       return;
     }
+
+    const phone = result[2];
 
     if (!state.currentAdminAlerts) {
       state.currentAdminAlerts = Object.assign({}, DEFAULT_ADMIN_ALERTS);
@@ -1400,14 +1531,14 @@
 
     // Check for duplicates
     if (state.currentAdminAlerts.phones.indexOf(phone) !== -1) {
-      showToast('Phone number already added', 'warning');
+      showInlineFeedback('admin-recipient-feedback', 'This number is already added', 'warning');
       return;
     }
 
     state.currentAdminAlerts.phones.push(phone);
     input.value = '';
     renderAlertPhones();
-    showToast('Phone added (save to apply)', 'success');
+    showInlineFeedback('admin-recipient-feedback', 'Phone added', 'success');
   }
 
   /**
@@ -1422,7 +1553,7 @@
     if (idx !== -1) {
       state.currentAdminAlerts.phones.splice(idx, 1);
       renderAlertPhones();
-      showToast('Phone removed (save to apply)', 'success');
+      showInlineFeedback('admin-recipient-feedback', 'Phone removed', 'success');
     }
   }
 
@@ -1441,8 +1572,10 @@
       escalation: getCheckbox('alert-escalation')
     };
 
-    dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).catch(function () {
-      showToast('Failed to save admin alerts', 'error');
+    dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).then(function () {
+      showInlineFeedback('admin-notify-feedback', 'Saved', 'success');
+    }).catch(function () {
+      showInlineFeedback('admin-notify-feedback', 'Failed to save', 'error');
     });
   }
 
@@ -1454,8 +1587,10 @@
     state.currentSettings.notify_ticket_created = getCheckbox('notify-ticket-created');
     state.currentSettings.notify_status_changed = getCheckbox('notify-status-changed');
     state.currentSettings.notify_agent_reply = getCheckbox('notify-agent-reply');
-    dbSet(DS_KEYS.SETTINGS, state.currentSettings).catch(function () {
-      showToast('Failed to save notification settings', 'error');
+    dbSet(DS_KEYS.SETTINGS, state.currentSettings).then(function () {
+      showInlineFeedback('customer-notify-feedback', 'Saved', 'success');
+    }).catch(function () {
+      showInlineFeedback('customer-notify-feedback', 'Failed to save', 'error');
     });
   }
 

@@ -252,22 +252,31 @@
   function loadHistory() {
     if (!state.contactPhone) return;
 
-    // Normalize phone for Entity Store query
     const normalizedPhone = state.contactPhone.replace(/\D/g, '').replace(/^0+/, '');
 
-    if (!state.client.db || !state.client.db.entity || typeof state.client.db.entity.getAll !== 'function') return;
-    state.client.db.entity.getAll('sms_log', {
-      filter: { recipient_phone: normalizedPhone },
-      page_size: 5
-    }).then(function(data) {
+    state.client.db.get('kwtsms_logs').then(function(result) {
+      let raw = (result && result.kwtsms_logs !== undefined) ? result.kwtsms_logs : result;
+      if (raw && typeof raw === 'object' && typeof raw.data === 'string') {
+        raw = raw.data;
+      }
+      let logs = [];
+      if (typeof raw === 'string') {
+        try { logs = JSON.parse(raw); } catch (e) { /* ignore */ }
+      } else if (Array.isArray(raw)) {
+        logs = raw;
+      }
+
+      // Filter by contact phone and take last 5
+      const filtered = logs.filter(function(r) {
+        return r.recipient_phone && r.recipient_phone.indexOf(normalizedPhone) !== -1;
+      }).slice(0, 5);
+
       const historyList = document.getElementById('history-list');
-      // Clear existing
       while (historyList.firstChild) {
         historyList.removeChild(historyList.firstChild);
       }
 
-      const records = data.records || data.data || [];
-      if (records.length === 0) {
+      if (filtered.length === 0) {
         const emptyEl = document.createElement('div');
         emptyEl.className = 'history-empty';
         emptyEl.textContent = 'No SMS history';
@@ -275,8 +284,7 @@
         return;
       }
 
-      records.forEach(function(record) {
-        const attrs = record.attributes || record;
+      filtered.forEach(function(rec) {
         const item = document.createElement('div');
         item.className = 'history-item';
 
@@ -284,26 +292,26 @@
         header.className = 'history-header';
 
         const status = document.createElement('span');
-        status.className = attrs.status === 'sent' ? 'history-status sent' : 'history-status failed';
-        status.textContent = attrs.status === 'sent' ? 'Sent' : 'Failed';
+        status.className = rec.status === 'sent' ? 'history-status sent' : 'history-status failed';
+        status.textContent = rec.status === 'sent' ? 'Sent' : 'Failed';
 
         const time = document.createElement('span');
         time.className = 'history-time';
-        time.textContent = formatRelativeTime(attrs.timestamp);
+        time.textContent = formatRelativeTime(rec.timestamp);
 
         header.appendChild(status);
         header.appendChild(time);
 
         const preview = document.createElement('div');
         preview.className = 'history-preview';
-        preview.textContent = attrs.message_preview || '';
+        preview.textContent = rec.message_preview || '';
 
         item.appendChild(header);
         item.appendChild(preview);
         historyList.appendChild(item);
       });
     }).catch(function() {
-      // Entity Store may not have data yet
+      // No logs yet
     });
   }
 
