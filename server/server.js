@@ -14,13 +14,6 @@
 // CONSTANTS
 // ======================================================================
 
-// Freshdesk ticket status codes
-const TICKET_STATUS = {
-  OPEN: 2,
-  PENDING: 3,
-  RESOLVED: 4,
-  CLOSED: 5
-};
 
 // Freshdesk ticket priority codes
 const TICKET_PRIORITY = {
@@ -99,13 +92,6 @@ const KWTSMS = {
   MAX_PAGES: 7
 };
 
-// kwtSMS error codes that should not be retried
-const NON_RETRYABLE_ERRORS = [
-  'ERR001', 'ERR002', 'ERR003', 'ERR004', 'ERR005',
-  'ERR006', 'ERR007', 'ERR008', 'ERR009', 'ERR010',
-  'ERR011', 'ERR012', 'ERR024', 'ERR025', 'ERR026',
-  'ERR027', 'ERR028', 'ERR031', 'ERR032'
-];
 
 // Status labels for Freshdesk statuses (used in template replacement)
 const STATUS_LABELS = {
@@ -282,46 +268,6 @@ function cleanMessage(message) {
   return text;
 }
 
-/**
- * GSM-7 basic charset + extended charset as a string for indexOf lookup.
- * Avoids regex with unnecessary escapes that trigger linter warnings.
- */
-const GSM7_ALL = '@\u00A3$\u00A5\u00E8\u00E9\u00F9\u00EC\u00F2\u00C7\n\u00D8\u00F8\r\u00C5\u00E5\u0394_\u03A6\u0393\u039B\u03A9\u03A0\u03A8\u03A3\u0398\u039E'
-  + ' \u00C6\u00E6\u00DF\u00C9!"#\u00A4%&\'()*+,-./0123456789:;<=>?'
-  + '\u00A1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00C4\u00D6\u00D1\u00DC\u00A7\u00BFabcdefghijklmnopqrstuvwxyz\u00E4\u00F6\u00F1\u00FC\u00E0'
-  + '\f^{}[]~|\\' + '\u20AC';
-
-/**
- * Detect if text contains non-GSM7 characters (requires Unicode encoding).
- */
-function isUnicode(text) {
-  for (let i = 0; i < text.length; i++) {
-    if (GSM7_ALL.indexOf(text[i]) === -1) return true;
-  }
-  return false;
-}
-
-/**
- * Calculate how many SMS parts a message will use.
- */
-function calculateSmsParts(text) {
-  if (!text) return { chars: 0, parts: 0, isUnicode: false };
-
-  const unicode = isUnicode(text);
-  const chars = text.length;
-
-  let parts;
-  if (unicode) {
-    if (chars <= 70) parts = 1;
-    else parts = Math.ceil(chars / 67);
-  } else {
-    if (chars <= 160) parts = 1;
-    else parts = Math.ceil(chars / 153);
-  }
-
-  return { chars, parts, isUnicode: unicode };
-}
-
 // ======================================================================
 // TEMPLATE ENGINE
 // ======================================================================
@@ -418,7 +364,7 @@ async function logSmsResult(entry) {
       const { data } = await $db.get(DS_KEYS.LOGS);
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
       if (Array.isArray(parsed)) logs = parsed;
-    } catch (e) { /* key doesn't exist yet */ }
+    } catch { /* key doesn't exist yet */ }
 
     logs.unshift({
       timestamp: new Date().toISOString(),
@@ -520,7 +466,7 @@ async function guardSettings() {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
     settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
-  } catch (err) {
+  } catch {
     log('Settings not found, plugin may not be initialized');
     return { error: { success: false, message: 'Plugin not configured' } };
   }
@@ -545,7 +491,7 @@ async function guardGateway(credentials) {
   try {
     const { data } = await $db.get(DS_KEYS.GATEWAY);
     gateway = typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (err) {
+  } catch {
     log('Gateway data not found');
     return { error: { success: false, message: 'Gateway not configured. Click Sync Now in Settings.' } };
   }
@@ -745,10 +691,10 @@ async function _sendBatch(credentials, mobile, message, sender, test) {
   } catch (err) {
     // FDK may throw with the response body inside the error
     if (err && err.response) {
-      try { return JSON.parse(err.response); } catch (e) { /* fall through */ }
+      try { return JSON.parse(err.response); } catch { /* fall through */ }
     }
     if (err && err.message) {
-      try { const parsed = JSON.parse(err.message); if (parsed.result) return parsed; } catch (e) { /* fall through */ }
+      try { const parsed = JSON.parse(err.message); if (parsed.result) return parsed; } catch { /* fall through */ }
     }
     return { result: 'ERROR', code: 'ERR', description: (err && err.message) || String(err) };
   }
@@ -801,21 +747,21 @@ async function loadSettings() {
   try {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
     return typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (e) { return null; }
+  } catch { return null; }
 }
 
 async function loadTemplates() {
   try {
     const { data } = await $db.get(DS_KEYS.TEMPLATES);
     return typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (e) { return {}; }
+  } catch { return {}; }
 }
 
 async function loadAdminAlerts() {
   try {
     const { data } = await $db.get(DS_KEYS.ADMIN_ALERTS);
     return typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (e) { return DEFAULT_ADMIN_ALERTS; }
+  } catch { return DEFAULT_ADMIN_ALERTS; }
 }
 
 
@@ -839,7 +785,7 @@ async function cacheTicketPhone(ticketId, phone) {
   try {
     const key = 'tphone_' + ticketId;
     await $db.set(key, { data: phone });
-  } catch (e) { /* ignore */ }
+  } catch { /* ignore */ }
 }
 
 async function getCachedPhone(ticketId) {
@@ -848,7 +794,7 @@ async function getCachedPhone(ticketId) {
     const key = 'tphone_' + ticketId;
     const result = await $db.get(key);
     return (result && result.data) || null;
-  } catch (e) { return null; }
+  } catch { return null; }
 }
 
 async function sendCustomerTicketCreated(ctx, payload, templates, settings, placeholders, ticketId) {
@@ -990,15 +936,6 @@ const INSTALL_DEFAULT_TEMPLATES = {
   }
 };
 
-/**
- * Initialize default data storage entries on install.
- */
-async function initializeDefaultData() {
-  await $db.set(DS_KEYS.SETTINGS, { data: JSON.stringify(DEFAULT_SETTINGS) });
-  await $db.set(DS_KEYS.TEMPLATES, { data: JSON.stringify(INSTALL_DEFAULT_TEMPLATES) });
-  await $db.set(DS_KEYS.ADMIN_ALERTS, { data: JSON.stringify(DEFAULT_ADMIN_ALERTS) });
-  await $db.set(DS_KEYS.STATS, { data: JSON.stringify(DEFAULT_STATS) });
-}
 
 /**
  * Register the daily sync cron job. Silently ignores if already exists.
@@ -1058,14 +995,6 @@ function buildInstallSettings(gateway, domain) {
   });
 }
 
-async function getExistingGateway() {
-  try {
-    const { data } = await $db.get(DS_KEYS.GATEWAY);
-    return typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (e) {
-    return { balance: 0, senderids: [], coverage: [], last_sync: '' };
-  }
-}
 
 function formatError(err) {
   return err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
@@ -1203,9 +1132,9 @@ exports = {
     try {
       const keys = [DS_KEYS.SETTINGS, DS_KEYS.GATEWAY, DS_KEYS.TEMPLATES, DS_KEYS.ADMIN_ALERTS, DS_KEYS.STATS, DS_KEYS.LOGS];
       for (let i = 0; i < keys.length; i++) {
-        try { await $db.delete(keys[i]); } catch (e) { /* ignore */ }
+        try { await $db.delete(keys[i]); } catch { /* ignore */ }
       }
-      try { await $schedule.delete({ name: 'kwtsms_daily_sync' }); } catch (e) { /* ignore */ }
+      try { await $schedule.delete({ name: 'kwtsms_daily_sync' }); } catch { /* ignore */ }
       log('Cleanup complete.');
     } catch (err) {
       console.error('[kwtsms] Cleanup failed:', err.message);

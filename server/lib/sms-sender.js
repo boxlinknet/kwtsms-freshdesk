@@ -46,7 +46,7 @@ async function guardSettings($db) {
     const { data } = await $db.get(DS_KEYS.SETTINGS);
     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
     settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
-  } catch (err) {
+  } catch {
     log('Settings not found, plugin may not be initialized');
     return { error: { success: false, message: 'Plugin not configured' } };
   }
@@ -66,7 +66,7 @@ async function guardGateway($db, $request, credentials) {
   try {
     const { data } = await $db.get(DS_KEYS.GATEWAY);
     gateway = typeof data === 'string' ? JSON.parse(data) : data;
-  } catch (err) {
+  } catch {
     log('Gateway data not found');
     return { error: { success: false, message: 'Gateway not configured. Click Sync Now in Settings.' } };
   }
@@ -275,10 +275,10 @@ async function _sendBatch($request, credentials, mobile, message, sender, test) 
   } catch (err) {
     // FDK may throw with the response body inside the error
     if (err && err.response) {
-      try { return JSON.parse(err.response); } catch (e) { /* fall through */ }
+      try { return JSON.parse(err.response); } catch { /* fall through */ }
     }
     if (err && err.message) {
-      try { const parsed = JSON.parse(err.message); if (parsed.result) return parsed; } catch (e) { /* fall through */ }
+      try { const parsed = JSON.parse(err.message); if (parsed.result) return parsed; } catch { /* fall through */ }
     }
     return { result: 'ERROR', code: 'ERR', description: (err && err.message) || String(err) };
   }

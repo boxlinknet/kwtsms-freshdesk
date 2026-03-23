@@ -31,7 +31,7 @@ async function logSmsResult($db, entry) {
       const { data } = await $db.get(DS_KEYS.LOGS);
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
       if (Array.isArray(parsed)) logs = parsed;
-    } catch (e) { /* key doesn't exist yet */ }
+    } catch { /* key doesn't exist yet */ }
 
     logs.unshift({
       timestamp: new Date().toISOString(),

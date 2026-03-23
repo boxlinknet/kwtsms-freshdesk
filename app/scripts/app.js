@@ -416,7 +416,7 @@
         raw = raw.data;
       }
       if (typeof raw === 'string') {
-        try { return JSON.parse(raw); } catch (e) { return raw; }
+        try { return JSON.parse(raw); } catch { return raw; }
       }
       return raw || null;
     }).catch(function () {
@@ -574,7 +574,7 @@
     try {
       const d = new Date(isoStr);
       return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
+    } catch {
       return isoStr;
     }
   }
@@ -1034,7 +1034,7 @@
 
   function handleTestSmsResult(result) {
     let resp = result && result.response ? result.response : {};
-    if (typeof resp === 'string') { try { resp = JSON.parse(resp); } catch (e) { /* keep */ } }
+    if (typeof resp === 'string') { try { resp = JSON.parse(resp); } catch { /* keep */ } }
     if (resp.success) {
       showTestFeedback('Test SMS sent successfully', 'success');
     } else {

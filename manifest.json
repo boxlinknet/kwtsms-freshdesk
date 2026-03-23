@@ -1,27 +1,14 @@
 {
-  "platform-version": "2.3",
-  "product": {
-    "freshdesk": {
+  "platform-version": "3.0",
+  "modules": {
+    "common": {
       "location": {
         "full_page_app": {
           "url": "index.html",
-          "icon": "img/icon-64.png"
-        },
-        "ticket_sidebar": {
-          "url": "sidebar.html",
-          "icon": "img/icon-64.png"
+          "icon": "img/icon-64.svg"
         }
       },
       "events": {
-        "onTicketCreate": {
-          "handler": "onTicketCreateHandler"
-        },
-        "onTicketUpdate": {
-          "handler": "onTicketUpdateHandler"
-        },
-        "onConversationCreate": {
-          "handler": "onConversationCreateHandler"
-        },
         "onAppInstall": {
           "handler": "onAppInstallHandler"
         },
@@ -43,10 +30,29 @@
         "manualSendSms": {},
         "syncGateway": {}
       }
+    },
+    "support_ticket": {
+      "location": {
+        "ticket_sidebar": {
+          "url": "sidebar.html",
+          "icon": "img/icon-64.svg"
+        }
+      },
+      "events": {
+        "onTicketCreate": {
+          "handler": "onTicketCreateHandler"
+        },
+        "onTicketUpdate": {
+          "handler": "onTicketUpdateHandler"
+        },
+        "onConversationCreate": {
+          "handler": "onConversationCreateHandler"
+        }
+      }
     }
   },
   "engines": {
-    "node": "18.20.8",
-    "fdk": "9.8.2"
+    "node": "24.11.1",
+    "fdk": "10.0.0"
   }
 }

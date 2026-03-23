@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="8" fill="#FFF"/>
+  <text x="6" y="30" font-family="Montserrat,Arial,sans-serif" font-weight="700" font-size="16" fill="#333">kwt</text>
+  <text x="6" y="50" font-family="Montserrat,Arial,sans-serif" font-weight="800" font-size="20" fill="#FFA200">SMS</text>
+</svg>

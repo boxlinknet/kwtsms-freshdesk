@@ -45,10 +45,10 @@
     // Server stores as { data: JSON.stringify(...) }
     const val = raw;
     if (val && typeof val === 'object' && typeof val.data === 'string') {
-      try { return JSON.parse(val.data); } catch (e) { return null; }
+      try { return JSON.parse(val.data); } catch { return null; }
     }
     if (typeof val === 'string') {
-      try { return JSON.parse(val); } catch (e) { return null; }
+      try { return JSON.parse(val); } catch { return null; }
     }
     return val;
   }
@@ -273,7 +273,7 @@
       }
       let logs = [];
       if (typeof raw === 'string') {
-        try { logs = JSON.parse(raw); } catch (e) { /* ignore */ }
+        try { logs = JSON.parse(raw); } catch { /* ignore */ }
       } else if (Array.isArray(raw)) {
         logs = raw;
       }
