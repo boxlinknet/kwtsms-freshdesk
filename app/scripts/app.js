@@ -1538,7 +1538,11 @@
     state.currentAdminAlerts.phones.push(phone);
     input.value = '';
     renderAlertPhones();
-    showInlineFeedback('admin-recipient-feedback', 'Phone added', 'success');
+    dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).then(function () {
+      showInlineFeedback('admin-recipient-feedback', 'Phone added', 'success');
+    }).catch(function () {
+      showInlineFeedback('admin-recipient-feedback', 'Failed to save', 'error');
+    });
   }
 
   /**
@@ -1553,7 +1557,11 @@
     if (idx !== -1) {
       state.currentAdminAlerts.phones.splice(idx, 1);
       renderAlertPhones();
-      showInlineFeedback('admin-recipient-feedback', 'Phone removed', 'success');
+      dbSet(DS_KEYS.ADMIN_ALERTS, state.currentAdminAlerts).then(function () {
+        showInlineFeedback('admin-recipient-feedback', 'Phone removed', 'success');
+      }).catch(function () {
+        showInlineFeedback('admin-recipient-feedback', 'Failed to save', 'error');
+      });
     }
   }
 
