@@ -1,39 +1,53 @@
 /**
- * logger.js - SMS log writer (Entity Store) and stats updater (KV Store)
- * Related: server/lib/constants.js, entities/entities.json
+ * logger.js - SMS log writer (KV array) and stats updater (KV Store)
+ * Related: server/lib/constants.js
  *
- * Logs every SMS send attempt to Entity Store (sms_log entity).
+ * Logs every SMS send attempt to Data Storage KV array (kwtsms_logs, max 200).
  * Updates aggregate counters in KV Store (kwtsms_stats).
  * All failures are non-fatal: SMS delivery is never blocked by logging errors.
  */
 
-const { DS_KEYS, ENTITY } = require('./constants');
+const { DS_KEYS } = require('./constants');
 
 /**
- * Log an SMS send result to Entity Store.
+ * Log an SMS send result to Data Storage KV array (max 200 entries).
  * Non-fatal: catches and console.error on failure.
  * @param {Object} $db - FDK Data Storage instance
  * @param {Object} entry - Log entry data
  * @param {string} entry.event_type - SMS_EVENT constant
+ * @param {string} entry.recipient_type - "requester", "agent", or "manual"
  * @param {string} entry.recipient_phone - Normalized phone
  * @param {string} entry.message_preview - First 80 chars of message
  * @param {string} entry.status - "sent" or "failed"
  * @param {string} [entry.api_response_code] - kwtSMS response code
+ * @param {string} [entry.error_message] - Human-readable error detail
  * @param {number} [entry.ticket_id] - Freshdesk ticket ID
  * @param {string} [entry.msg_id] - kwtSMS message ID
  */
 async function logSmsResult($db, entry) {
   try {
-    await $db.entity.create(ENTITY.SMS_LOG, {
+    let logs = [];
+    try {
+      const { data } = await $db.get(DS_KEYS.LOGS);
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (Array.isArray(parsed)) logs = parsed;
+    } catch (e) { /* key doesn't exist yet */ }
+
+    logs.unshift({
       timestamp: new Date().toISOString(),
       event_type: entry.event_type,
+      recipient_type: entry.recipient_type || '',
       recipient_phone: entry.recipient_phone,
       message_preview: (entry.message_preview || '').substring(0, 80),
       status: entry.status,
       api_response_code: entry.api_response_code || '',
+      error_message: entry.error_message || '',
       ticket_id: entry.ticket_id || 0,
       msg_id: entry.msg_id || ''
     });
+
+    if (logs.length > 200) logs = logs.slice(0, 200);
+    await $db.set(DS_KEYS.LOGS, { data: JSON.stringify(logs) });
   } catch (err) {
     console.error('[kwtsms] Failed to write log entry:', err.message);
   }

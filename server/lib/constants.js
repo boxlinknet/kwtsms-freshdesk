@@ -25,12 +25,8 @@ const DS_KEYS = {
   GATEWAY: 'kwtsms_gateway',
   TEMPLATES: 'kwtsms_templates',
   ADMIN_ALERTS: 'kwtsms_admin_alerts',
-  STATS: 'kwtsms_stats'
-};
-
-// Entity Store entity name
-const ENTITY = {
-  SMS_LOG: 'sms_log'
+  STATS: 'kwtsms_stats',
+  LOGS: 'kwtsms_logs'
 };
 
 // SMS event types (used in templates and logs)
@@ -41,7 +37,8 @@ const SMS_EVENT = {
   ADMIN_NEW_TICKET: 'admin_new_ticket',
   ADMIN_HIGH_PRIORITY: 'admin_high_priority',
   ADMIN_ESCALATION: 'admin_escalation',
-  MANUAL_SEND: 'manual_send'
+  MANUAL_SEND: 'manual_send',
+  GATEWAY_TEST: 'gateway_test'
 };
 
 // Default settings (written on app install)
@@ -52,7 +49,8 @@ const DEFAULT_SETTINGS = {
   language: 'en',
   active_sender_id: 'KWT-SMS',
   company_name: '',
-  schema_version: 1
+  schema_version: 1,
+  default_country_code: '965'
 };
 
 // Default admin alerts config
@@ -111,7 +109,7 @@ const PRIORITY_LABELS = {
 };
 
 module.exports = {
-  TICKET_STATUS, TICKET_PRIORITY, DS_KEYS, ENTITY, SMS_EVENT,
+  TICKET_STATUS, TICKET_PRIORITY, DS_KEYS, SMS_EVENT,
   DEFAULT_SETTINGS, DEFAULT_ADMIN_ALERTS, DEFAULT_STATS,
   KWTSMS, NON_RETRYABLE_ERRORS, STATUS_LABELS, PRIORITY_LABELS
 };
