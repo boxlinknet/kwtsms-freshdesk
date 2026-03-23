@@ -1079,7 +1079,6 @@ exports = {
   onTicketCreateHandler: async function(args) {
     const { data: payload } = args;
     const phone = getCustomerPhone(payload);
-    log('onTicketCreate fired. Phone: ' + (phone || 'NONE'));
 
     // Cache phone for later events (update, conversation)
     const ticketIdVal = payload.ticket?.id;
@@ -1111,7 +1110,6 @@ exports = {
     // Cache phone for future events (e.g. conversation on older tickets)
     if (phone && ticketIdVal) await cacheTicketPhone(ticketIdVal, phone);
 
-    log('onTicketUpdate fired. Ticket: ' + ticketIdVal + ' Phone: ' + (phone || 'NONE') + ' Changes: ' + Object.keys(changes).join(','));
 
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
@@ -1136,7 +1134,6 @@ exports = {
     const ticketId = conv.ticket_id || payload.ticket?.id;
 
     if (!isPublicAgentReply(conv)) {
-      log('onConversationCreate: not a public agent reply, skipping');
       return;
     }
 
@@ -1144,7 +1141,6 @@ exports = {
     let customerPhone = getCustomerPhone(payload);
     if (!customerPhone && ticketId) customerPhone = await getCachedPhone(ticketId);
 
-    log('onConversationCreate fired. Ticket: ' + ticketId + ' Phone: ' + (customerPhone || 'NONE'));
 
     if (!customerPhone) {
       log('Customer SMS skipped (agent_reply): no phone found. Ticket: ' + ticketId);
