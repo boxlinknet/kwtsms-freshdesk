@@ -823,10 +823,41 @@ async function loadAdminAlerts() {
 // HANDLER HELPERS (reduce cyclomatic complexity of exports)
 // ======================================================================
 
+function getCustomerPhone(payload) {
+  // Freshdesk payloads vary by event type. Check all known locations.
+  return payload.requester?.phone
+    || payload.requester?.mobile
+    || payload.ticket?.phone
+    || payload.ticket?.requester_phone
+    || payload.contact?.phone
+    || payload.contact?.mobile
+    || null;
+}
+
+async function cacheTicketPhone(ticketId, phone) {
+  if (!ticketId || !phone) return;
+  try {
+    const key = 'tphone_' + ticketId;
+    await $db.set(key, { data: phone });
+  } catch (e) { /* ignore */ }
+}
+
+async function getCachedPhone(ticketId) {
+  if (!ticketId) return null;
+  try {
+    const key = 'tphone_' + ticketId;
+    const result = await $db.get(key);
+    return (result && result.data) || null;
+  } catch (e) { return null; }
+}
+
 async function sendCustomerTicketCreated(ctx, payload, templates, settings, placeholders, ticketId) {
   if (settings.notify_ticket_created === false) return;
-  const customerPhone = payload.requester?.phone;
-  if (!customerPhone) return;
+  const customerPhone = getCustomerPhone(payload);
+  if (!customerPhone) {
+    log('Customer SMS skipped (ticket_created): no phone found for requester');
+    return;
+  }
   const message = resolveTemplate(templates, SMS_EVENT.TICKET_CREATED, settings.language, placeholders);
   if (!message) return;
   await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.TICKET_CREATED, ticketId });
@@ -850,17 +881,14 @@ async function sendAdminHighPriority(ctx, payload, templates, settings, placehol
   await send({ ...ctx, phones: adminAlerts.phones, message: highMsg, eventType: SMS_EVENT.ADMIN_HIGH_PRIORITY, ticketId });
 }
 
-function isTerminalStatusChange(changes) {
-  if (!changes.status) return false;
-  const newStatus = Array.isArray(changes.status) ? changes.status[1] : changes.status;
-  return newStatus === TICKET_STATUS.RESOLVED || newStatus === TICKET_STATUS.CLOSED;
-}
-
 async function sendStatusChanged(ctx, payload, changes, templates, settings, placeholders, ticketId) {
   if (settings.notify_status_changed === false) return;
-  if (!isTerminalStatusChange(changes)) return;
-  const customerPhone = payload.requester?.phone;
-  if (!customerPhone) return;
+  if (!changes.status) return;
+  const customerPhone = getCustomerPhone(payload);
+  if (!customerPhone) {
+    log('Customer SMS skipped (status_changed): no phone found for requester');
+    return;
+  }
   const message = resolveTemplate(templates, SMS_EVENT.STATUS_CHANGED, settings.language, placeholders);
   if (!message) return;
   await send({ ...ctx, phones: [customerPhone], message, eventType: SMS_EVENT.STATUS_CHANGED, ticketId });
@@ -1000,6 +1028,11 @@ function isPublicAgentReply(conversation) {
 
 async function sendAgentReply(args, payload, settings) {
   if (settings.notify_agent_reply === false) return;
+  const customerPhone = getCustomerPhone(payload);
+  if (!customerPhone) {
+    log('Customer SMS skipped (agent_reply): no phone in sendAgentReply');
+    return;
+  }
   const credentials = getCredentials(args);
   const templates = await loadTemplates();
   const placeholders = buildPlaceholderData({ data: payload }, settings.company_name || '', settings.language);
@@ -1007,7 +1040,7 @@ async function sendAgentReply(args, payload, settings) {
   if (!message) return;
   await send({
     credentials: credentials,
-    phones: [payload.requester.phone],
+    phones: [customerPhone],
     message: message,
     eventType: SMS_EVENT.AGENT_REPLY,
     ticketId: payload.ticket?.id
@@ -1045,8 +1078,12 @@ function formatError(err) {
 exports = {
   onTicketCreateHandler: async function(args) {
     const { data: payload } = args;
-    
-    
+    const phone = getCustomerPhone(payload);
+    log('onTicketCreate fired. Phone: ' + (phone || 'NONE'));
+
+    // Cache phone for later events (update, conversation)
+    const ticketIdVal = payload.ticket?.id;
+    if (phone && ticketIdVal) await cacheTicketPhone(ticketIdVal, phone);
 
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
@@ -1055,7 +1092,6 @@ exports = {
     const templates = await loadTemplates();
     const companyName = settings.company_name || '';
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
-    const ticketIdVal = payload.ticket?.id;
     const sendCtx = { credentials };
 
     await sendCustomerTicketCreated(sendCtx, payload, templates, settings, placeholders, ticketIdVal);
@@ -1065,9 +1101,17 @@ exports = {
 
   onTicketUpdateHandler: async function(args) {
     const { data: payload } = args;
+    const changes = payload.changes || payload.ticket?.changes || {};
+    const ticketIdVal = payload.ticket?.id;
 
+    // Ensure phone is available (fall back to cache)
+    let phone = getCustomerPhone(payload);
+    if (!phone && ticketIdVal) phone = await getCachedPhone(ticketIdVal);
+    if (phone && !payload.requester) payload.requester = { phone: phone };
+    // Cache phone for future events (e.g. conversation on older tickets)
+    if (phone && ticketIdVal) await cacheTicketPhone(ticketIdVal, phone);
 
-    const changes = payload.changes || {};
+    log('onTicketUpdate fired. Ticket: ' + ticketIdVal + ' Phone: ' + (phone || 'NONE') + ' Changes: ' + Object.keys(changes).join(','));
 
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
@@ -1076,22 +1120,46 @@ exports = {
     const templates = await loadTemplates();
     const companyName = settings.company_name || '';
     const placeholders = buildPlaceholderData({ data: payload }, companyName, settings.language);
-    const ticketIdVal = payload.ticket?.id;
     const sendCtx = { credentials };
 
-    await sendStatusChanged(sendCtx, payload, changes, templates, settings, placeholders, ticketIdVal);
+    // Send on any status change
+    if (changes.status) {
+      await sendStatusChanged(sendCtx, payload, changes, templates, settings, placeholders, ticketIdVal);
+    }
+    // Send on escalation (priority increase)
     await sendEscalationAlert(sendCtx, changes, templates, settings, placeholders, ticketIdVal);
   },
 
   onConversationCreateHandler: async function(args) {
     const payload = args.data;
-    if (!isPublicAgentReply(payload.conversation || {})) return;
-    if (!payload.requester?.phone) return;
+    const conv = payload.conversation || {};
+    const ticketId = conv.ticket_id || payload.ticket?.id;
+
+    if (!isPublicAgentReply(conv)) {
+      log('onConversationCreate: not a public agent reply, skipping');
+      return;
+    }
+
+    // Conversation payload has no requester. Fall back to cached phone.
+    let customerPhone = getCustomerPhone(payload);
+    if (!customerPhone && ticketId) customerPhone = await getCachedPhone(ticketId);
+
+    log('onConversationCreate fired. Ticket: ' + ticketId + ' Phone: ' + (customerPhone || 'NONE'));
+
+    if (!customerPhone) {
+      log('Customer SMS skipped (agent_reply): no phone found. Ticket: ' + ticketId);
+      return;
+    }
 
     const settings = await loadSettings();
     if (!settings || !settings.enabled) return;
 
-    await sendAgentReply(args, payload, settings);
+    // Enrich payload with phone for sendAgentReply
+    const enrichedPayload = Object.assign({}, payload, {
+      requester: { phone: customerPhone },
+      ticket: payload.ticket || { id: ticketId }
+    });
+    await sendAgentReply(args, enrichedPayload, settings);
   },
 
   onScheduledEventHandler: async function(args) {

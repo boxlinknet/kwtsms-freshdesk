@@ -39,16 +39,28 @@
     }).catch(function () { /* ignored */ });
   }
 
-  function parseSettings(raw) {
-    if (raw && raw.kwtsms_settings) {
-      state.settings = JSON.parse(raw.kwtsms_settings);
+  function unwrapDbValue(raw) {
+    if (!raw) return null;
+    // client.db.get returns value directly, not { key: value }
+    // Server stores as { data: JSON.stringify(...) }
+    const val = raw;
+    if (val && typeof val === 'object' && typeof val.data === 'string') {
+      try { return JSON.parse(val.data); } catch (e) { return null; }
     }
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
+  }
+
+  function parseSettings(raw) {
+    const parsed = unwrapDbValue(raw);
+    if (parsed) state.settings = parsed;
   }
 
   function parseTemplates(raw) {
-    if (raw && raw.kwtsms_templates) {
-      state.templates = JSON.parse(raw.kwtsms_templates);
-    }
+    const parsed = unwrapDbValue(raw);
+    if (parsed) state.templates = parsed;
   }
 
   function parseTicket(raw) {
