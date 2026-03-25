@@ -996,6 +996,25 @@ function buildInstallSettings(gateway, domain) {
 }
 
 
+async function loadEnabledSettings() {
+  const settings = await loadSettings();
+  return (settings && settings.enabled) ? settings : null;
+}
+
+async function resolveConversationPhone(payload, ticketId) {
+  const phone = getCustomerPhone(payload);
+  if (phone) return phone;
+  if (ticketId) return await getCachedPhone(ticketId);
+  return null;
+}
+
+function enrichConversationPayload(payload, phone, ticketId) {
+  return Object.assign({}, payload, {
+    requester: { phone: phone },
+    ticket: payload.ticket || { id: ticketId }
+  });
+}
+
 function formatError(err) {
   return err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
 }
@@ -1060,30 +1079,20 @@ exports = {
   onConversationCreateHandler: async function(args) {
     const payload = args.data;
     const conv = payload.conversation || {};
-    const ticketId = conv.ticket_id || payload.ticket?.id;
 
-    if (!isPublicAgentReply(conv)) {
-      return;
-    }
+    if (!isPublicAgentReply(conv)) return;
 
-    // Conversation payload has no requester. Fall back to cached phone.
-    let customerPhone = getCustomerPhone(payload);
-    if (!customerPhone && ticketId) customerPhone = await getCachedPhone(ticketId);
-
-
+    const ticketId = conv.ticket_id || (payload.ticket && payload.ticket.id);
+    const customerPhone = await resolveConversationPhone(payload, ticketId);
     if (!customerPhone) {
       log('Customer SMS skipped (agent_reply): no phone found. Ticket: ' + ticketId);
       return;
     }
 
-    const settings = await loadSettings();
-    if (!settings || !settings.enabled) return;
+    const settings = await loadEnabledSettings();
+    if (!settings) return;
 
-    // Enrich payload with phone for sendAgentReply
-    const enrichedPayload = Object.assign({}, payload, {
-      requester: { phone: customerPhone },
-      ticket: payload.ticket || { id: ticketId }
-    });
+    const enrichedPayload = enrichConversationPayload(payload, customerPhone, ticketId);
     await sendAgentReply(args, enrichedPayload, settings);
   },
 
@@ -1181,3 +1190,6 @@ exports = {
     renderData(null, result);
   }
 };
+
+// Make handlers available for testing (FDK sandbox ignores this)
+if (typeof module !== 'undefined') { module.exports = exports; }

@@ -83,8 +83,6 @@
   function renderBalance() {
     state.client.db.get('kwtsms_gateway').then(function(data) {
       const gateway = JSON.parse(data.kwtsms_gateway);
-      const balanceEl = document.getElementById('sidebar-balance');
-      balanceEl.textContent = (gateway.balance || 0) + ' cr';
 
       const statusDot = document.getElementById('status-dot');
       statusDot.className = gateway.balance > 0 ? 'dot-green' : 'dot-red';
